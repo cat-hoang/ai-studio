@@ -188,7 +188,7 @@ function linearIssueToIssue(n: LinearIssue, staffId: string): Issue {
     jobGuid: n.id,
     taskSequence: '',
     taskType,
-    staffCode: n.assignee?.email ?? staffId,
+    assignee: n.assignee?.email ?? staffId,
     startableTasks: [{ taskSequence: '', taskType, taskDescription: n.title }],
     summary: n.title,
     description: (n.description ?? n.title).slice(0, 500),

@@ -151,7 +151,7 @@ function ghIssueToIssue(i: GHIssue, staffId: string): Issue {
     jobGuid: String(i.id),
     taskSequence: '',
     taskType,
-    staffCode: i.assignee?.login ?? staffId,
+    assignee: i.assignee?.login ?? staffId,
     startableTasks: [{ taskSequence: '', taskType, taskDescription: i.title }],
     summary: i.title ?? '',
     description: desc,

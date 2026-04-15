@@ -210,7 +210,7 @@ function jiraIssueToIssue(i: JiraIssue, baseUrl: string, staffId: string): Issue
     jobGuid: i.id,
     taskSequence: '',
     taskType,
-    staffCode: f.assignee?.emailAddress ?? staffId,
+    assignee: f.assignee?.emailAddress ?? staffId,
     startableTasks: [{ taskSequence: '', taskType, taskDescription: f.summary }],
     summary: f.summary,
     description: desc,

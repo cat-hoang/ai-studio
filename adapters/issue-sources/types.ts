@@ -1,12 +1,12 @@
 /**
  * Shared types for the Ratatosk issue-source adapter layer.
  *
- * All adapters (GitHub Issues, Linear, Jira, file, ediprod) produce Issues
+ * All adapters (GitHub Issues, Linear, Jira, file) produce Issues
  * in this canonical shape — the same shape that get-ratatosk-startable-jobs.ps1
  * and the dashboard consume.
  */
 
-/** A sub-task belonging to a parent issue (maps to ediProd workflow tasks in legacy mode). */
+/** A sub-task belonging to a parent issue. */
 export interface StartableTask {
   taskSequence: string;
   taskType: string;
@@ -28,8 +28,8 @@ export interface Issue {
   taskSequence: string;
   /** Issue type: feature | bugfix | investigation | refactor | test | … */
   taskType: string;
-  /** Username / staff code of the assignee */
-  staffCode: string;
+  /** Username of the assignee */
+  assignee: string;
   /** Ordered list of startable sub-tasks */
   startableTasks: StartableTask[];
   /** Short title */
@@ -59,7 +59,7 @@ export interface FetchResult {
 export interface AdapterConfig {
   /** Which adapter is active */
   adapterName: string;
-  /** Resolved staff ID / username (from config.staff_id or config.staff_code legacy) */
+  /** Runtime config: resolved staff ID / username (from config or env) */
   staffId: string;
   /** Flat key:value pairs from the adapter's named YAML sub-section */
   section: Record<string, string>;

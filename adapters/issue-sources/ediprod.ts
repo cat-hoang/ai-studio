@@ -108,7 +108,7 @@ function bmResultToIssue(r: Record<string, unknown>, staffCode: string): Issue {
     jobGuid: str(r['parentJobPk']) || jobNumber,
     taskSequence: str(r['sequence']),
     taskType,
-    staffCode: str(r['assignedStaff']) || staffCode,
+    assignee: str(r['assignedStaff']) || staffCode,
     startableTasks: [{ taskSequence: str(r['sequence']), taskType, taskDescription: desc }],
     summary: str(r['jobSummary']) || desc,
     description: desc,

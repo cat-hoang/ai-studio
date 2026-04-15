@@ -107,7 +107,7 @@ function normalizeIssue(item: unknown, idx: number): Issue {
     jobGuid: str(r['jobGuid']) || str(r['guid']) || jobNumber,
     taskSequence: str(r['taskSequence']) || '',
     taskType,
-    staffCode: str(r['staffCode']) || str(r['assignee']) || '',
+    assignee: str(r['assignee']) || str(r['staffCode']) || '',,
     startableTasks: Array.isArray(r['startableTasks'])
       ? r['startableTasks'] as Issue['startableTasks']
       : [{ taskSequence: '', taskType, taskDescription: str(r['summary']) || '' }],
@@ -126,7 +126,7 @@ function emptyIssue(jobNumber: string): Issue {
     jobGuid: jobNumber,
     taskSequence: '',
     taskType: 'feature',
-    staffCode: '',
+    assignee: '',,
     startableTasks: [{ taskSequence: '', taskType: 'feature', taskDescription: '' }],
     summary: jobNumber,
     description: '',
