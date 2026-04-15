@@ -361,7 +361,11 @@ function getProductRepoKeywords(groupName, repos) {
 
 function readBatchingConfig() {
   const defaultRepos = readConfigListBlockValue('default_repos');
-  const productRepoMapping = readConfigMapListBlockValue('product_repo_mapping');
+  // Prefer generic repo_groups; fall back to legacy product_repo_mapping for backward compat
+  const repoGroups = readConfigMapListBlockValue('repo_groups');
+  const productRepoMapping = Object.keys(repoGroups).length > 0
+    ? repoGroups
+    : readConfigMapListBlockValue('product_repo_mapping');
   return { defaultRepos, productRepoMapping };
 }
 

@@ -94,26 +94,7 @@ if (-not ($claudeInstalled -or $copilotInstalled)) {
 $defaultWorkerCli = if ($claudeInstalled -and $copilotInstalled) { 'auto' } elseif ($claudeInstalled) { 'claude' } else { 'copilot' }
 
 # ---------------------------------------------------------------------------
-# 2. VPN connectivity
-# ---------------------------------------------------------------------------
-Write-Status 'Checking VPN connectivity to crikey.wtg.zone...'
-
-try {
-    $tcp = New-Object System.Net.Sockets.TcpClient
-    $connectTask = $tcp.ConnectAsync('crikey.wtg.zone', 443)
-    if ($connectTask.Wait(5000)) {
-        Write-Ok 'VPN connectivity OK'
-    } else {
-        Write-Warn 'Connection to crikey.wtg.zone timed out - ensure VPN is connected'
-    }
-    $tcp.Dispose()
-} catch {
-    Write-Warn "Could not reach crikey.wtg.zone: $($_.Exception.Message)"
-    Write-Warn 'Continuing anyway - ensure VPN is connected before using Ratatosk.'
-}
-
-# ---------------------------------------------------------------------------
-# 3. Create workspace directories
+# 2. Create workspace directories
 # ---------------------------------------------------------------------------
 Write-Status 'Creating workspace directories...'
 
@@ -127,7 +108,7 @@ foreach ($dir in @($workspaceDir, $artifactsCacheDir)) {
 }
 
 # ---------------------------------------------------------------------------
-# 4. Copy config template
+# 3. Copy config template
 # ---------------------------------------------------------------------------
 Write-Status 'Setting up local configuration...'
 
@@ -139,7 +120,7 @@ if ((Test-Path $localConfigFile) -and -not $Force) {
 }
 
 # ---------------------------------------------------------------------------
-# 5. Prompt for local settings
+# 4. Prompt for local settings
 # ---------------------------------------------------------------------------
 Write-Status 'Configuring local settings...'
 
@@ -164,24 +145,6 @@ function Set-YamlValueOptional {
     return [regex]::Replace($Content, $pattern, $replacement)
 }
 
-function Set-YamlList {
-    param([string]$Content, [string]$Key, [string]$Prompt, [string]$Hint)
-    if ($Hint) { Write-Host "    $Hint" -ForegroundColor DarkGray }
-    $raw = Read-Host "$Prompt (comma-separated, e.g. OBM,RAD — or press Enter to leave empty)"
-    $codes = @()
-    if (-not [string]::IsNullOrWhiteSpace($raw)) {
-        $codes = @($raw -split '\s*,\s*' | Where-Object { $_ -ne '' } | ForEach-Object { $_.Trim().ToUpper() })
-    }
-    $listValue = if ($codes.Count -gt 0) { '["' + ($codes -join '","') + '"]' } else { '[]' }
-    $pattern = '(?m)^(' + [regex]::Escape($Key) + ':\s*)\[.*\]'
-    $replacement = '${1}' + $listValue
-    return [regex]::Replace($Content, $pattern, $replacement)
-}
-
-$content = Set-YamlValue $content 'staff_code'  'Staff code (3-char)'                 ''
-$content = Set-YamlValueOptional $content 'board_name' 'Buffer board name (leave blank to use edi CLI as primary source)'
-$content = Set-YamlList $content 'staff_capabilities' 'Your BM OData capabilities' `
-    'Find yours: ediProd > Resource Capabilities > apply "Capabilities possessed by current user" filter'
 $content = Set-YamlValue $content 'worker_cli'  'Worker CLI (auto|claude|copilot)'    $defaultWorkerCli
 $content = Set-YamlValueOptional $content 'smtp_from'  'SMTP from address'
 $content = Set-YamlValueOptional $content 'smtp_to'    'SMTP to address'
@@ -190,7 +153,7 @@ Set-Content -Path $localConfigFile -Value $content -NoNewline
 Write-Ok 'config.local.yaml updated'
 
 # ---------------------------------------------------------------------------
-# 6. Create command symlinks
+# 5. Create command symlinks
 # ---------------------------------------------------------------------------
 Write-Status 'Creating command symlinks...'
 
@@ -237,27 +200,7 @@ if ($claudeInstalled) {
 }
 
 # ---------------------------------------------------------------------------
-# 7. edi CLI check (auto-run)
-# ---------------------------------------------------------------------------
-Write-Status 'Checking edi CLI...'
-
-if (Test-Command 'edi') {
-    try {
-        $ediVersion = & edi --version 2>&1
-        Write-Ok "edi CLI found: $ediVersion"
-    } catch {
-        Write-Warn "edi CLI found but version check failed: $($_.Exception.Message)"
-    }
-} else {
-    Write-Warn 'edi CLI not found. Install it with:'
-    Write-Warn '  git clone https://github.com/WiseTechGlobal/mcp-ediprod.git'
-    Write-Warn '  cd mcp-ediprod && bun install && bun link'
-    Write-Warn 'Then re-run this installer or verify manually with: edi --version'
-}
-
-
-# ---------------------------------------------------------------------------
-# 8. Summary
+# 6. Summary
 # ---------------------------------------------------------------------------
 $workerCliMatch = [regex]::Match($content, '(?m)^worker_cli:\s*"([^"]*)"')
 $workerCli = if ($workerCliMatch.Success) { $workerCliMatch.Groups[1].Value } else { $defaultWorkerCli }

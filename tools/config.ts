@@ -55,21 +55,3 @@ export function readConfigKey(key: string): string | null {
   const { local, base } = configPaths();
   return readYamlKey(local, key) ?? readYamlKey(base, key);
 }
-
-/**
- * Resolve the absolute path to the mcp-ediprod repository.
- * Priority: mcp_ediprod_root config > {git_source_root}/mcp-ediprod
- */
-export function resolveMcpEdiprodRoot(): string {
-  const explicit = readConfigKey('mcp_ediprod_root');
-  if (explicit) return explicit;
-
-  const gitRoot = readConfigKey('git_source_root');
-  if (!gitRoot) {
-    throw new Error('Cannot resolve mcp-ediprod path: neither mcp_ediprod_root nor git_source_root is configured.');
-  }
-
-  // git_source_root may be relative to repo root
-  const resolved = path.isAbsolute(gitRoot) ? gitRoot : path.resolve(repoRoot(), gitRoot);
-  return path.join(resolved, 'mcp-ediprod');
-}
