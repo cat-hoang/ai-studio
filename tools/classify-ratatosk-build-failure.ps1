@@ -1,11 +1,7 @@
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
-    [string]$JobNumber = '',
-    [string]$TaskSequence = '',
+    [string]$IssueId = '',
     [string]$WorkspacePath = '',
-    [string]$Phase = '',
-
-    [Parameter(Mandatory)]
     [string]$FailureText,
 
     [string[]]$TargetProjects = @(),
@@ -24,11 +20,11 @@ $worker = $null
 $resolvedWorkspacePath = ''
 $relativeWorkspacePath = ''
 
-if (-not [string]::IsNullOrWhiteSpace($JobNumber)) {
+if (-not [string]::IsNullOrWhiteSpace($IssueId)) {
     $state = Read-RatatoskState
-    $worker = Get-RatatoskWorker -State $state -JobNumber $JobNumber -TaskSequence $TaskSequence
+    $worker = Get-RatatoskWorker -State $state -IssueId $IssueId
     if (-not $worker) {
-        throw "Worker not found for job $JobNumber"
+        throw "Worker not found for issue $IssueId"
     }
 
     if ([string]::IsNullOrWhiteSpace($Phase)) {
@@ -63,13 +59,13 @@ $assessment = Get-RatatoskBuildFailureAssessment `
     -FailedTests $FailedTests
 
 $result = [PSCustomObject]@{
-    jobNumber = $JobNumber
+    issueId = $IssueId
     phase = $Phase
     workspacePath = $relativeWorkspacePath
     buildFailure = $assessment
 }
 
-if ($null -ne $worker -and $PSCmdlet.ShouldProcess($JobNumber, 'Classify Ratatosk build failure')) {
+if ($null -ne $worker -and $PSCmdlet.ShouldProcess($IssueId, 'Classify Ratatosk build failure')) {
     $timestamp = [string](Get-ObjectPropertyValue -Object $assessment -Name 'updatedAt' -Default ((Get-Date).ToUniversalTime().ToString('o')))
     Set-RatatoskProperty -Object $worker -Name 'buildFailure' -Value $assessment
     if (-not [string]::IsNullOrWhiteSpace($relativeWorkspacePath)) {

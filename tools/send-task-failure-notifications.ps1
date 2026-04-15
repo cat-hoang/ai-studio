@@ -1,19 +1,11 @@
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
     [Parameter(Mandatory)]
-    [string]$JobNumber,
-
-    [string]$JobGuid = '',
-
-    [string]$TaskSequence = '',
-
-    [Parameter(Mandatory)]
-    [string]$TaskType,
+    [string]$IssueId,
 
     [Parameter(Mandatory)]
     [string]$ErrorMessage,
 
-    [int]$Zone = 0,
     [string]$Logs = '',
     [string]$WorkerName = '',
     [string]$StartedAt = '',
@@ -103,11 +95,7 @@ if (-not [string]::IsNullOrWhiteSpace($StartedAt)) {
 }
 
 $sharedData = @{
-    jobNumber = $JobNumber
-    jobGuid = $JobGuid
-    taskSequence = $TaskSequence
-    taskType = $TaskType
-    zone = $Zone
+    issueId = $IssueId
     error = $ErrorMessage
     logs = $Logs
     worker = $WorkerName
@@ -125,13 +113,13 @@ $emailPayload = @{
     data = $sharedData
 }
 
-if ($PSCmdlet.ShouldProcess($JobNumber, 'Send Teams and email failure notifications')) {
+if ($PSCmdlet.ShouldProcess($IssueId, 'Send Teams and email failure notifications')) {
     $teamsResult = Invoke-NotificationScript -ScriptPath $teamsScript -Payload $teamsPayload -Label 'Teams'
     $emailResult = Invoke-NotificationScript -ScriptPath $emailScript -Payload $emailPayload -Label 'Email'
 
     [PSCustomObject]@{
         success = $true
-        jobNumber = $JobNumber
+        issueId = $IssueId
         teams = $teamsResult
         email = $emailResult
     }

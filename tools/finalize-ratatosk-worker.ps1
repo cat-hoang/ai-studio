@@ -1,8 +1,6 @@
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
-    [string]$JobNumber = '',
-
-    [string]$TaskSequence = '',
+    [string]$IssueId = '',
 
     [Parameter(Mandatory)]
     [ValidateSet('done', 'failed')]
@@ -26,13 +24,11 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
 
-# Auto-detect JobNumber from workspace directory name if not provided
-if ([string]::IsNullOrWhiteSpace($JobNumber)) {
-    $dirName = Split-Path -Leaf (Get-Location).Path
-    if ($dirName -match '^(WI|CS|PRJ)\d{8}$') {
-        $JobNumber = $dirName
-    } else {
-        throw 'JobNumber not provided and could not be detected from the current directory.'
+# Auto-detect IssueId from workspace directory name if not provided
+if ([string]::IsNullOrWhiteSpace($IssueId)) {
+    $IssueId = Split-Path -Leaf (Get-Location).Path
+    if ([string]::IsNullOrWhiteSpace($IssueId)) {
+        throw 'IssueId not provided and could not be detected from the current directory.'
     }
 }
 
@@ -117,25 +113,21 @@ function Set-OrAddRatatoskJob {
 }
 
 $state = Read-RatatoskState
-$worker = Get-RatatoskWorker -State $state -JobNumber $JobNumber -TaskSequence $TaskSequence
+$worker = Get-RatatoskWorker -State $state -IssueId $IssueId
 if (-not $worker) {
-    $taskSuffix = if ([string]::IsNullOrWhiteSpace($TaskSequence)) { '' } else { " task $TaskSequence" }
-    throw "Worker not found for job $JobNumber$taskSuffix"
+    throw "Worker not found for issue $IssueId"
 }
 
 # Idempotency guard: if this worker was already finalized, abort before sending any notifications.
-# Write-RatatoskState runs before notifications, so finalReportedAt is set only when finalize has
-# already completed at least through state-write. Re-running notifications would cause duplicates.
 $existingFinalReportedAt = [string](Get-ObjectPropertyValue -Object $worker -Name 'finalReportedAt' -Default '')
 if (-not [string]::IsNullOrWhiteSpace($existingFinalReportedAt)) {
-    $taskSuffix = if ([string]::IsNullOrWhiteSpace($TaskSequence)) { '' } else { " task $TaskSequence" }
-    Write-Warning "finalize: $JobNumber$taskSuffix was already finalized at $existingFinalReportedAt — skipping to prevent duplicate notifications."
+    Write-Warning "finalize: $IssueId was already finalized at $existingFinalReportedAt — skipping to prevent duplicate notifications."
     return
 }
 
 $effectiveWorkspacePath = if (-not [string]::IsNullOrWhiteSpace($WorkspacePath)) { $WorkspacePath } else { [string]$worker.workspacePath }
 if ([string]::IsNullOrWhiteSpace($effectiveWorkspacePath)) {
-    throw "Workspace path not available for job $JobNumber"
+    throw "Workspace path not available for issue $IssueId"
 }
 $resolvedWorkspacePath = Resolve-RatatoskPath -Path $effectiveWorkspacePath
 $relativeWorkspacePath = ConvertTo-RatatoskRelativePath -Path $resolvedWorkspacePath
@@ -185,11 +177,7 @@ if ($Status -eq 'failed') {
 }
 
 $report = [PSCustomObject]@{
-    jobNumber = $JobNumber
-    jobGuid = [string]$worker.jobGuid
-    taskSequence = [string]$worker.taskSequence
-    taskType = [string]$worker.taskType
-    zone = if ($null -ne $worker.zone) { [int]$worker.zone } else { 0 }
+    issueId = $IssueId
     description = [string]$worker.description
     status = $Status
     phase = $finishedPhase
@@ -209,7 +197,7 @@ $report = [PSCustomObject]@{
     branch = [string]$worker.branch
 }
 
-if (-not $PSCmdlet.ShouldProcess($JobNumber, "Finalize worker as $Status")) {
+if (-not $PSCmdlet.ShouldProcess($IssueId, "Finalize worker as $Status")) {
     return
 }
 
@@ -251,167 +239,18 @@ if ($Status -eq 'done') {
 
 Write-RatatoskState -State $state
 
-# Upload investigation report to ediProd for INV tasks (and incident-investigation work items).
-# Best-effort: errors are logged but never break the finalize script.
-$taskTypeForUpload = [string]$worker.taskType
-$isInvTask = $taskTypeForUpload -eq 'INV'
-if ($isInvTask -and $Status -eq 'done' -and -not [string]::IsNullOrWhiteSpace($JobNumber)) {
-    try {
-        $ediCmd = Get-Command 'edi' -ErrorAction SilentlyContinue
-        if ($null -ne $ediCmd) {
-            # Look for any HTML report files produced in the workspace
-            $reportFiles = @(Get-ChildItem -Path $resolvedWorkspacePath -Filter '*report*.html' -File -ErrorAction SilentlyContinue)
-            foreach ($reportFile in $reportFiles) {
-                $uploadResult = & edi file upload $JobNumber $reportFile.FullName --type INT 2>&1 | Out-String
-                Write-Verbose "finalize: uploaded $($reportFile.Name) to $JobNumber — $uploadResult"
-            }
-        }
-    } catch {
-        Write-Warning "finalize: could not upload investigation report to ediProd: $_"
-    }
-}
-
-# Append completion/failure note to ediProd task — safety net in case the worker didn't do it.
-# Best-effort: errors are logged but never break the finalize script.
-# Fall back to worker state taskSequence when the parameter was not passed.
-$effectiveTaskSequence = if (-not [string]::IsNullOrWhiteSpace($TaskSequence)) { $TaskSequence }
-    elseif ($null -ne $worker -and -not [string]::IsNullOrWhiteSpace([string]$worker.taskSequence)) { [string]$worker.taskSequence }
-    else { '' }
-if (-not [string]::IsNullOrWhiteSpace($JobNumber) -and -not [string]::IsNullOrWhiteSpace($effectiveTaskSequence)) {
-    try {
-        $ediCmd = Get-Command 'edi' -ErrorAction SilentlyContinue
-        if ($null -ne $ediCmd) {
-            # Read staffCode from config
-            $ratatoskRoot = Get-RatatoskRootPath
-            $configBase  = Join-Path $ratatoskRoot 'config.yaml'
-            $configLocal = Join-Path $ratatoskRoot 'config.local.yaml'
-            $configText  = @($configBase, $configLocal) | Where-Object { Test-Path $_ } |
-                           ForEach-Object { Get-Content $_ -Raw } | Join-String -Separator "`n"
-            $staffCodeMatch = [regex]::Match($configText, '(?m)^\s*staff_code\s*:\s*[''"]?([^''"\s#]+)[''"]?')
-            $staffCode = if ($staffCodeMatch.Success) { $staffCodeMatch.Groups[1].Value.Trim() } else { 'RAT' }
-
-            # Find the taskId matching TaskSequence (jsonl = one flat task per line, easiest to parse)
-            $ediListJson = & edi --format jsonl task list $JobNumber 2>&1 | Out-String
-            $tasks = @($ediListJson -split "`r?`n" |
-                Where-Object { $_ -match '^\s*\{' } |
-                ForEach-Object { try { $_ | ConvertFrom-Json -ErrorAction Stop } catch { $null } } |
-                Where-Object { $_ -ne $null })
-            $seqNum = [int]$effectiveTaskSequence
-            $matchedTask = $tasks | Where-Object {
-                $s = $_.sequence ?? $_.taskSequence ?? $_.seq ?? $_.Sequence
-                $null -ne $s -and [int]$s -eq $seqNum
-            } | Select-Object -First 1
-
-            if ($null -ne $matchedTask) {
-                $taskId = [string]($matchedTask.id ?? $matchedTask.taskId ?? $matchedTask.TaskId)
-                if (-not [string]::IsNullOrWhiteSpace($taskId)) {
-                    $nowLocal = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-                    $durationTag = if (-not [string]::IsNullOrWhiteSpace($duration)) { "$duration - " } else { '' }
-                    $taskTypeTag = [string]($matchedTask.type ?? $matchedTask.taskType ?? '')
-
-                    $noteLines = [System.Collections.Generic.List[string]]::new()
-
-                    if ($Status -eq 'done') {
-                        $noteLines.Add("[$staffCode] Completed: $nowLocal (${durationTag}Ratatosk)")
-
-                        # Summary / root cause — always include
-                        if (-not [string]::IsNullOrWhiteSpace($Summary)) {
-                            $noteLines.Add($Summary.Trim())
-                        }
-
-                        # PR URLs — include for any task that produced them
-                        if ($effectivePrUrls.Count -gt 0) {
-                            $noteLines.Add("PRs: $($effectivePrUrls -join ', ')")
-                        }
-
-                        # Changes list — include for coding tasks
-                        if ($changesList.Count -gt 0) {
-                            $noteLines.Add("Changes: $($changesList -join '; ')")
-                        }
-
-                        # Report path — include for INV tasks
-                        if ($taskTypeTag -eq 'INV' -and -not [string]::IsNullOrWhiteSpace($relativeWorkspacePath)) {
-                            $reportFiles = @(Get-ChildItem -Path $resolvedWorkspacePath -Filter '*report*.html' -File -ErrorAction SilentlyContinue)
-                            if ($reportFiles.Count -gt 0) {
-                                $reportNames = $reportFiles | ForEach-Object { Join-Path $relativeWorkspacePath $_.Name }
-                                $noteLines.Add("Report: $($reportNames -join ', ')")
-                            }
-                        }
-                    } else {
-                        $noteLines.Add("[$staffCode] Failed: $nowLocal (${durationTag}Ratatosk)")
-                        $errText = if (-not [string]::IsNullOrWhiteSpace($ErrorMessage)) { $ErrorMessage.Trim() } else { $Summary.Trim() }
-                        if (-not [string]::IsNullOrWhiteSpace($errText)) {
-                            $noteLines.Add($errText)
-                        }
-                        if (-not [string]::IsNullOrWhiteSpace($ErrorMessage) -and -not [string]::IsNullOrWhiteSpace($Summary) -and $ErrorMessage.Trim() -ne $Summary.Trim()) {
-                            $noteLines.Add("Summary: $($Summary.Trim())")
-                        }
-                    }
-
-                    $noteContent = $noteLines -join "`n"
-                    # Safety-net deduplication: skip appending if a completion/failure note for this
-                    # staff code already exists (e.g. the worker appended notes manually before calling finalize).
-                    $existingNotesText = & edi task notes read $taskId 2>&1 | Out-String
-                    $completionMarker = if ($Status -eq 'done') { "[$staffCode] Completed:" } else { "[$staffCode] Failed:" }
-                    if ($existingNotesText -notmatch [regex]::Escape($completionMarker)) {
-                        & edi task notes append $taskId --content $noteContent 2>&1 | Out-Null
-                    }
-                }
-            }
-        }
-    } catch {
-        Write-Warning "finalize: could not append ediProd task note: $_"
-    }
-}
-
 $toolsDir = Split-Path -Parent $PSCommandPath
 $teamsScript = Join-Path $toolsDir 'send-teams-notification.ps1'
 $emailScript = Join-Path $toolsDir 'send-email-notification.ps1'
 
-# Resolve zone: use worker value; fall back to default_zone in config when 0
-$effectiveZone = if ($null -ne $worker.zone -and [int]$worker.zone -ne 0) { [int]$worker.zone } else { 0 }
-if ($effectiveZone -eq 0) {
-    try {
-        $ratatoskRootForZone = Get-RatatoskRootPath
-        $cfgText = @(
-            (Join-Path $ratatoskRootForZone 'config.yaml'),
-            (Join-Path $ratatoskRootForZone 'config.local.yaml')
-        ) | Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Raw } | Join-String -Separator "`n"
-        $zm = [regex]::Match($cfgText, '(?m)^\s*default_zone\s*:\s*(\d+)')
-        if ($zm.Success) { $effectiveZone = [int]$zm.Groups[1].Value }
-    } catch { }
-}
-
-# Resolve GUID: use worker value; fall back to edi CLI lookup
-$effectiveJobGuid = [string]$worker.jobGuid
-if ([string]::IsNullOrWhiteSpace($effectiveJobGuid)) {
-    try {
-        $ediCmd2 = Get-Command 'edi' -ErrorAction SilentlyContinue
-        if ($null -ne $ediCmd2) {
-            $wiJson2 = & edi workitem get $JobNumber --format json 2>$null | Out-String
-            if (-not [string]::IsNullOrWhiteSpace($wiJson2)) {
-                $wiObj2 = $wiJson2 | ConvertFrom-Json -ErrorAction Stop
-                foreach ($doc2 in @($wiObj2.attachedDocuments)) {
-                    $m2 = [regex]::Match([string]$doc2.url, 'ediprod:///I(?:WorkItem|SupportIncident|Project)/([0-9a-fA-F\-]{36})/')
-                    if ($m2.Success) { $effectiveJobGuid = $m2.Groups[1].Value; break }
-                }
-            }
-        }
-    } catch { }
-}
-
 if ($Status -eq 'done') {
     $sharedData = @{
-        jobNumber = $JobNumber
-        jobGuid = $effectiveJobGuid
+        issueId = $IssueId
         jobTitle = [string]$worker.summary
-        taskSequence = [string]$worker.taskSequence
-        taskType = [string]$worker.taskType
         description = [string]$worker.description
         status = $Status
         prUrls = $effectivePrUrls
         duration = $duration
-        zone = $effectiveZone
         summary = $Summary.Trim()
         changes = $changesList
         testing = $testingList
@@ -463,12 +302,8 @@ if ($Status -eq 'done') {
 } else {
     $failureScript = Join-Path $toolsDir 'send-task-failure-notifications.ps1'
     $notificationResult = & $failureScript `
-        -JobNumber $JobNumber `
-        -JobGuid $effectiveJobGuid `
-        -TaskSequence ([string]$worker.taskSequence) `
-        -TaskType ([string]$worker.taskType) `
+        -IssueId $IssueId `
         -ErrorMessage $(if ([string]::IsNullOrWhiteSpace($ErrorMessage)) { $Summary.Trim() } else { $ErrorMessage }) `
-        -Zone $effectiveZone `
         -Logs ($effectiveLogs -join [Environment]::NewLine) `
         -StartedAt $effectiveStartedAt `
         -Timestamp $Timestamp
@@ -509,7 +344,7 @@ if ($Status -eq 'done') {
 
 [PSCustomObject]@{
     success = $true
-    jobNumber = $JobNumber
+    issueId = $IssueId
     status = $Status
     reportPath = $reportPath
     teams = $teamsResult

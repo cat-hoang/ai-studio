@@ -172,6 +172,8 @@ function githubHeaders(token: string): Record<string, string> {
 
 function resolveToken(section: Record<string, string>): string {
   const envName = section['token_env'] ?? 'GITHUB_TOKEN';
+  // If the value looks like a raw token rather than an env var name, use it directly.
+  if (/^(github_pat_|ghp_|gho_|ghs_|ghr_)/.test(envName)) return envName;
   return process.env[envName] ?? '';
 }
 

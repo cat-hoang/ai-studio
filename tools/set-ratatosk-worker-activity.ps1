@@ -1,8 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$JobNumber = '',
-
-    [string]$TaskSequence = '',
+    [string]$IssueId = '',
 
     [Alias('Activity')]
     [ValidateSet(
@@ -44,20 +42,18 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
 
-# Auto-detect JobNumber from workspace directory name if not provided
-if ([string]::IsNullOrWhiteSpace($JobNumber)) {
-    $dirName = Split-Path -Leaf (Get-Location).Path
-    if ($dirName -match '^(WI|CS|PRJ)\d{8}$') {
-        $JobNumber = $dirName
-    } else {
-        throw 'JobNumber not provided and could not be detected from the current directory.'
+# Auto-detect IssueId from workspace directory name if not provided
+if ([string]::IsNullOrWhiteSpace($IssueId)) {
+    $IssueId = Split-Path -Leaf (Get-Location).Path
+    if ([string]::IsNullOrWhiteSpace($IssueId)) {
+        throw 'IssueId not provided and could not be detected from the current directory.'
     }
 }
 
 $state = Read-RatatoskState
-$worker = Get-RatatoskWorker -State $state -JobNumber $JobNumber -TaskSequence $TaskSequence
+$worker = Get-RatatoskWorker -State $state -IssueId $IssueId
 if (-not $worker) {
-    throw "Worker not found for job $JobNumber"
+    throw "Worker not found for issue $IssueId"
 }
 
 Set-RatatoskProperty -Object $worker -Name 'activityStatus' -Value $ActivityStatus

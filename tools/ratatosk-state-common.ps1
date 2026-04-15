@@ -439,7 +439,8 @@ function Write-RatatoskState {
                 # Build a set of worker keys the caller is tracking
                 $callerWorkerKeys = @{}
                 foreach ($w in @($State.workers)) {
-                    $jn = [string](Get-ObjectPropertyValue -Object $w -Name 'jobNumber' -Default '')
+                    $jn = [string](Get-ObjectPropertyValue -Object $w -Name 'issueId' -Default '')
+                    if ([string]::IsNullOrWhiteSpace($jn)) { $jn = [string](Get-ObjectPropertyValue -Object $w -Name 'jobNumber' -Default '') }
                     $ts2 = [string](Get-ObjectPropertyValue -Object $w -Name 'taskSequence' -Default '')
                     if (-not [string]::IsNullOrWhiteSpace($jn)) {
                         $key = if ([string]::IsNullOrWhiteSpace($ts2)) { $jn } else { "${jn}::${ts2}" }
@@ -450,7 +451,8 @@ function Write-RatatoskState {
                 # Build disk worker keys
                 $diskWorkerKeys = @{}
                 foreach ($w in @($diskState.workers)) {
-                    $jn = [string](Get-ObjectPropertyValue -Object $w -Name 'jobNumber' -Default '')
+                    $jn = [string](Get-ObjectPropertyValue -Object $w -Name 'issueId' -Default '')
+                    if ([string]::IsNullOrWhiteSpace($jn)) { $jn = [string](Get-ObjectPropertyValue -Object $w -Name 'jobNumber' -Default '') }
                     $ts2 = [string](Get-ObjectPropertyValue -Object $w -Name 'taskSequence' -Default '')
                     if (-not [string]::IsNullOrWhiteSpace($jn)) {
                         $key = if ([string]::IsNullOrWhiteSpace($ts2)) { $jn } else { "${jn}::${ts2}" }
@@ -462,7 +464,8 @@ function Write-RatatoskState {
                 $movedOutKeys = [System.Collections.Generic.HashSet[string]]::new()
                 foreach ($bucket in @('completedJobs', 'failedJobs')) {
                     foreach ($j in @(Get-ObjectPropertyValue -Object $diskState -Name $bucket -Default @())) {
-                        $jn = [string](Get-ObjectPropertyValue -Object $j -Name 'jobNumber' -Default '')
+                        $jn = [string](Get-ObjectPropertyValue -Object $j -Name 'issueId' -Default '')
+                        if ([string]::IsNullOrWhiteSpace($jn)) { $jn = [string](Get-ObjectPropertyValue -Object $j -Name 'jobNumber' -Default '') }
                         $ts2 = [string](Get-ObjectPropertyValue -Object $j -Name 'taskSequence' -Default '')
                         if (-not [string]::IsNullOrWhiteSpace($jn)) {
                             $key = if ([string]::IsNullOrWhiteSpace($ts2)) { $jn } else { "${jn}::${ts2}" }
@@ -490,7 +493,8 @@ function Write-RatatoskState {
                 $diskAllKeys = [System.Collections.Generic.HashSet[string]]::new()
                 foreach ($bucket in @('workers', 'completedJobs', 'failedJobs', 'waitingQueue')) {
                     foreach ($j in @(Get-ObjectPropertyValue -Object $diskState -Name $bucket -Default @())) {
-                        $jn = [string](Get-ObjectPropertyValue -Object $j -Name 'jobNumber' -Default '')
+                        $jn = [string](Get-ObjectPropertyValue -Object $j -Name 'issueId' -Default '')
+                        if ([string]::IsNullOrWhiteSpace($jn)) { $jn = [string](Get-ObjectPropertyValue -Object $j -Name 'jobNumber' -Default '') }
                         $ts2 = [string](Get-ObjectPropertyValue -Object $j -Name 'taskSequence' -Default '')
                         if (-not [string]::IsNullOrWhiteSpace($jn)) {
                             $key = if ([string]::IsNullOrWhiteSpace($ts2)) { $jn } else { "${jn}::${ts2}" }
@@ -602,17 +606,17 @@ function Get-RatatoskTaskSequenceText {
 
 function Get-RatatoskJobKey {
     param(
-        [string]$JobNumber,
+        [string]$IssueId,
         $TaskSequence = $null
     )
 
-    $resolvedJobNumber = if ([string]::IsNullOrWhiteSpace($JobNumber)) { '' } else { $JobNumber.Trim().ToUpperInvariant() }
+    $resolvedIssueId = if ([string]::IsNullOrWhiteSpace($IssueId)) { '' } else { $IssueId.Trim().ToUpperInvariant() }
     $resolvedTaskSequence = Get-RatatoskTaskSequenceText -Value $TaskSequence
     if ([string]::IsNullOrWhiteSpace($resolvedTaskSequence)) {
-        return $resolvedJobNumber
+        return $resolvedIssueId
     }
 
-    return ($resolvedJobNumber + '::' + $resolvedTaskSequence)
+    return ($resolvedIssueId + '::' + $resolvedTaskSequence)
 }
 
 function Get-RatatoskJobObjectKey {
@@ -621,8 +625,12 @@ function Get-RatatoskJobObjectKey {
         [object]$Job
     )
 
+    $id = [string](Get-ObjectPropertyValue -Object $Job -Name 'issueId' -Default '')
+    if ([string]::IsNullOrWhiteSpace($id)) {
+        $id = [string](Get-ObjectPropertyValue -Object $Job -Name 'jobNumber' -Default '')
+    }
     return Get-RatatoskJobKey `
-        -JobNumber ([string](Get-ObjectPropertyValue -Object $Job -Name 'jobNumber' -Default '')) `
+        -IssueId $id `
         -TaskSequence (Get-ObjectPropertyValue -Object $Job -Name 'taskSequence' -Default '')
 }
 
@@ -632,13 +640,16 @@ function Test-RatatoskJobMatch {
         [object]$Job,
 
         [Parameter(Mandatory)]
-        [string]$JobNumber,
+        [string]$IssueId,
 
         $TaskSequence = $null
     )
 
-    $jobJobNumber = [string](Get-ObjectPropertyValue -Object $Job -Name 'jobNumber' -Default '')
-    if ($jobJobNumber.Trim().ToUpperInvariant() -ne $JobNumber.Trim().ToUpperInvariant()) {
+    $jobIssueId = [string](Get-ObjectPropertyValue -Object $Job -Name 'issueId' -Default '')
+    if ([string]::IsNullOrWhiteSpace($jobIssueId)) {
+        $jobIssueId = [string](Get-ObjectPropertyValue -Object $Job -Name 'jobNumber' -Default '')
+    }
+    if ($jobIssueId.Trim().ToUpperInvariant() -ne $IssueId.Trim().ToUpperInvariant()) {
         return $false
     }
 
@@ -657,12 +668,12 @@ function Get-RatatoskWorker {
         [psobject]$State,
 
         [Parameter(Mandatory)]
-        [string]$JobNumber,
+        [string]$IssueId,
 
         $TaskSequence = $null
     )
 
-    return @($State.workers | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $JobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+    return @($State.workers | Where-Object { Test-RatatoskJobMatch -Job $_ -IssueId $IssueId -TaskSequence $TaskSequence }) | Select-Object -First 1
 }
 
 function Ensure-RatatoskWorkspaceDirectory {

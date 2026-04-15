@@ -302,26 +302,19 @@ function normalizeTaskSequence(value) {
   return firstNonEmptyString(value);
 }
 
-function getTaskKey(jobNumber, taskSequence) {
-  const resolvedJobNumber = firstNonEmptyString(jobNumber);
+function getTaskKey(issueId, taskSequence) {
+  const resolvedIssueId = firstNonEmptyString(issueId);
   const resolvedTaskSequence = normalizeTaskSequence(taskSequence);
-  return resolvedTaskSequence ? `${resolvedJobNumber}::${resolvedTaskSequence}` : resolvedJobNumber;
+  return resolvedTaskSequence ? `${resolvedIssueId}::${resolvedTaskSequence}` : resolvedIssueId;
 }
 
 function getTaskKeyFromJob(job) {
-  return getTaskKey(job && job.jobNumber, job && job.taskSequence);
+  const id = firstNonEmptyString(job && job.issueId, job && job.jobNumber);
+  return getTaskKey(id, job && job.taskSequence);
 }
 
 function compareJobs(left, right) {
-  const leftZone = asNumber(left && left.zone, Number.MAX_SAFE_INTEGER);
-  const rightZone = asNumber(right && right.zone, Number.MAX_SAFE_INTEGER);
-  if (leftZone !== rightZone) return leftZone - rightZone;
-
-  const leftSequence = getSequenceSortValue(left && left.taskSequence);
-  const rightSequence = getSequenceSortValue(right && right.taskSequence);
-  if (leftSequence !== rightSequence) return leftSequence - rightSequence;
-
-  return firstNonEmptyString(left && left.jobNumber).localeCompare(firstNonEmptyString(right && right.jobNumber));
+  return firstNonEmptyString(left && (left.issueId || left.jobNumber)).localeCompare(firstNonEmptyString(right && (right.issueId || right.jobNumber)));
 }
 
 function compareJobsByCompletedAt(left, right) {
@@ -389,8 +382,8 @@ function getAutoStartPreferences(state) {
     : {};
 }
 
-function isNeverAutoStart(state, jobNumber, taskSequence = '') {
-  const preference = getAutoStartPreferences(state)[getTaskKey(jobNumber, taskSequence)];
+function isNeverAutoStart(state, issueId, taskSequence = '') {
+  const preference = getAutoStartPreferences(state)[getTaskKey(issueId, taskSequence)];
   if (preference === true) return true;
   return !!(preference && typeof preference === 'object' && preference.neverAutoStart === true);
 }
@@ -447,22 +440,8 @@ function resolveRatatoskPath(value) {
   return path.isAbsolute(trimmed) ? trimmed : path.join(RATATOSK_DIR, trimmed);
 }
 
-function getEdiProdHttpsLink(jobNumber, jobGuid) {
-  const match = isNonEmptyString(jobNumber) ? jobNumber.trim().match(/^(WI|CS|PRJ)(\d{8})$/i) : null;
-  const guid = isNonEmptyString(jobGuid) ? jobGuid.trim() : '';
-  if (!match || !guid) return '';
-
-  const type = match[1].toUpperCase();
-  const controller = type === 'WI'
-    ? 'WorkItem'
-    : type === 'CS'
-      ? 'SupportIncident'
-      : type === 'PRJ'
-        ? 'Project'
-        : '';
-
-  if (!controller) return '';
-  return `https://ediprod.cw.wisetechglobal.com/link/ShowEditForm/${controller}/${guid}?lang=en-gb`;
+function getEdiProdHttpsLink() {
+  return '';
 }
 
 function normalizeJob(job) {
@@ -485,7 +464,8 @@ function normalizeJob(job) {
 
   return {
     ...job,
-    jobNumber: firstNonEmptyString(job.jobNumber),
+    issueId: firstNonEmptyString(job.issueId, job.jobNumber),
+    jobNumber: firstNonEmptyString(job.issueId, job.jobNumber),
     jobGuid: firstNonEmptyString(job.jobGuid),
     taskSequence: firstNonEmptyString(job.taskSequence),
     taskType: firstNonEmptyString(job.taskType) || 'unknown',
@@ -521,7 +501,7 @@ function normalizeJob(job) {
     prUrl: prUrls[0] || '',
     logs: asArray(job.logs).filter(log => typeof log === 'string'),
     subAgentCount,
-    jobUrl: getEdiProdHttpsLink(firstNonEmptyString(job.jobNumber), firstNonEmptyString(job.jobGuid)),
+    jobUrl: firstNonEmptyString(job.jobUrl),
   };
 }
 
@@ -630,13 +610,13 @@ function normalizeState(rawState) {
   const failedJobs = new Map();
 
   function store(targetMap, job) {
-    if (!job || !job.jobNumber) return;
+    if (!job || !(job.issueId || job.jobNumber)) return;
     const taskKey = getTaskKeyFromJob(job);
     targetMap.set(taskKey, mergeJobs(targetMap.get(taskKey), job));
   }
 
   function routeToBucket(bucket, job) {
-    if (!job || !job.jobNumber) return;
+    if (!job || !(job.issueId || job.jobNumber)) return;
 
     if (bucket === 'completed') {
       const taskKey = getTaskKeyFromJob(job);
@@ -774,7 +754,7 @@ function resolveJobRepoSelection(job, batchingConfig) {
 }
 
 function getWorkspaceCost(job, repoCount) {
-  const relativeWorkspacePath = firstNonEmptyString(job && job.workspacePath, job && job.jobNumber ? path.join('workspaces', job.jobNumber) : '');
+  const relativeWorkspacePath = firstNonEmptyString(job && job.workspacePath, (job && (job.issueId || job.jobNumber)) ? path.join('workspaces', job.issueId || job.jobNumber) : '');
   const resolvedWorkspacePath = resolveRatatoskPath(relativeWorkspacePath);
   if (resolvedWorkspacePath && fs.existsSync(resolvedWorkspacePath)) {
     return { label: 'reuse workspace', score: 18, path: relativeWorkspacePath };
@@ -789,7 +769,7 @@ function buildRepoGroupCounts(jobs, batchingConfig) {
   const counts = new Map();
   for (const job of asArray(jobs)) {
     const selection = resolveJobRepoSelection(job, batchingConfig);
-    const repoKey = firstNonEmptyString(selection.repoGroup, selection.repos.join('|'), firstNonEmptyString(job && job.jobNumber));
+    const repoKey = firstNonEmptyString(selection.repoGroup, selection.repos.join('|'), firstNonEmptyString(job && (job.issueId || job.jobNumber)));
     counts.set(repoKey, (counts.get(repoKey) || 0) + 1);
   }
   return counts;
@@ -797,7 +777,7 @@ function buildRepoGroupCounts(jobs, batchingConfig) {
 
 function buildBatchingHints(job, batchingConfig, repoGroupCounts) {
   const selection = resolveJobRepoSelection(job, batchingConfig);
-  const repoKey = firstNonEmptyString(selection.repoGroup, selection.repos.join('|'), firstNonEmptyString(job && job.jobNumber));
+  const repoKey = firstNonEmptyString(selection.repoGroup, selection.repos.join('|'), firstNonEmptyString(job && (job.issueId || job.jobNumber)));
   const overlapCount = Math.max(0, (repoGroupCounts.get(repoKey) || 0) - 1);
   const repoCount = selection.repos.length;
   const workspaceCost = getWorkspaceCost(job, repoCount);
