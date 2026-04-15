@@ -1,0 +1,139 @@
+name: ratatosk
+version: "1.0.0"
+branch_prefix: ""  # Branch naming prefix (e.g., ABC). Defaults to staff_code if empty.
+dashboard_port: 3210
+
+# ---------------------------------------------------------------------------
+# Issue source adapter (Phase 1: studio mode)
+# Set adapter to switch away from the built-in ediprod/PAVE path.
+# Available: github-issues | linear | jira | file | ediprod (default: empty = legacy ediprod)
+# ---------------------------------------------------------------------------
+issue_source:
+  adapter: ""                     # set to github-issues, linear, jira, or file to enable studio mode
+  polling_interval_ms: 60000
+  # GitHub Issues — used when adapter = github-issues
+  github_issues:
+    repo: ""                      # owner/repo  e.g. my-org/my-repo
+    labels: "ready-for-dev"       # comma-separated label filter
+    assignee: me                  # "me" or a specific GitHub username
+    token_env: GITHUB_TOKEN       # env var name holding the PAT
+    per_page: "50"
+  # Linear — used when adapter = linear
+  linear:
+    team_key: ""                  # Linear team key e.g. ENG
+    state: Todo                   # state name to filter by
+    assignee: me                  # "me" or a specific email/user id
+    api_key_env: LINEAR_API_KEY   # env var name for the Linear API key
+    per_page: "50"
+  # Jira — used when adapter = jira
+  jira:
+    base_url: ""                  # e.g. https://yourorg.atlassian.net
+    project_key: ""               # e.g. ENG
+    status: "To Do"               # JQL status filter
+    assignee: currentUser()       # JQL assignee clause
+    jql: ""                       # optional full JQL override (ignores project/status/assignee above)
+    token_env: JIRA_TOKEN         # env var for Atlassian API token
+    email_env: JIRA_EMAIL         # env var for account email (used for basic auth)
+    per_page: "50"
+  # File — used when adapter = file  (useful for testing / custom pipelines)
+  file:
+    path: issues.json             # path relative to ratatosk root, or absolute
+
+# ---------------------------------------------------------------------------
+# Studio mode (Phase 2 — agent team pipeline, coming soon)
+# ---------------------------------------------------------------------------
+studio:
+  enabled: false                  # set true to enable the multi-agent studio pipeline
+  autonomy_mode: suggestions-only # suggestions-only | auto
+  review_cycles: 2                # max developer revision cycles before escalating to human
+  gates:
+    post_design: true             # pause for human approval after spec.md is written
+    post_pr: true                 # pause for human approval before merging
+
+# ---------------------------------------------------------------------------
+# Generic repo + build config (replaces WTG-specific product_repo_mapping)
+# ---------------------------------------------------------------------------
+# repo_groups defines logical groupings used by the studio orchestrator.
+# Workers clone only repos in the matching group for the issue being worked on.
+# repo_groups:
+#   backend:
+#     - my-api
+#     - my-db-migrations
+#   frontend:
+#     - my-web-app
+
+# build.commands and build.test_commands define how to build / test each repo.
+# These replace the Crikey artifact download for non-WTG users.
+# build:
+#   commands:
+#     my-api: "dotnet build"
+#     my-web-app: "npm run build"
+#   test_commands:
+#     my-api: "dotnet test"
+#     my-web-app: "npm test"
+
+# ---------------------------------------------------------------------------
+# Legacy WTG / ediProd settings (still active when adapter is empty or ediprod)
+# ---------------------------------------------------------------------------
+buffer_board_url: "http://localhost:6610/"
+crikey_base_url: "https://crikey.wtg.zone"
+crikey_target_repo: "https://github.com/wisetechglobal/CargoWise"
+crikey_default_branch: "master"
+crikey_build_config: "Debug"
+artifacts_max_cached: 10
+vpn_check_host: "crikey.wtg.zone"
+product_repo_mapping:
+  Rating:
+    - CargoWise
+    - CargoWise.Database
+    - Rating.Content
+  CargoWise:
+    - CargoWise
+    - CargoWise.Database
+    - Rating.Content
+  RatesService:
+    - RatesService
+    - RatesService.NativeRates
+    - Rating.Content
+  Glow:
+    - Glow
+    - Glow.CargoWiseOne
+bin_target_repo: "CargoWise"
+bin_copy_sources:
+  - Glow.CargoWiseOne
+  - CargoWise.Database
+db_upgrade:
+  executable: "CargoWise\Bin\CargoWise.WindowsDesktop.exe"
+  args: ". Odyssey -ConsoleDbUpgrader -NoSplash"
+  database: "Odyssey"
+model_routing:
+  design: "opus"
+  code: "opus"
+  test: "sonnet"
+  review: "sonnet"
+  triage: "opus"
+  default: "sonnet"
+email_polling_interval_ms: 30000
+email_poll_folder_path: "Inbox/Ratatosk"
+email_command_intake_enabled: false
+email_command_send_replies: true
+email_command_subject_prefix: "Ratatosk Command"
+email_command_allowed_senders: ""
+teams_webhook_enabled: false  # Set to false to suppress webhook (Adaptive Card) notifications while keeping direct chat
+domain_plugins:
+  - name: "Rating.AI"
+    path: ""  # Set in config.local.yaml. Resolved as {git_source_root}/Rating.AI when empty.
+    modules: ["RAT", "CLR", "COS", "RSL", "ICT", "SOQ", "RAD", "SAL", "CCC", "NQP", "RPI", "RS"]
+    inv_command: "commands\\investigate-incident.prompt.md"
+mcp_ediprod_root: ""  # Absolute path to mcp-ediprod repo. If empty, resolved as {git_source_root}/mcp-ediprod.
+autonomy_mode: "suggestions-only"  # suggestions-only or auto
+max_concurrent_workers: 3
+autonomy_max_workers_per_repo_group: 1
+startable_jobs_polling_interval_ms: 30000
+startable_jobs_fetch_timeout_ms: 120000
+startable_jobs_fallback_mode: "edi-cli"  # disabled or edi-cli (use edi workitem list when PAVE board is unavailable)
+startable_jobs_fallback_on_empty: false
+excluded_task_types: ["SHV", "SH0", "PRV", "MTG", "CHK", "CH0", "CH1", "CH2", "CHG", "CH4"]
+# Staff capabilities for BM OData query — fetches unassigned tasks that match these capabilities.
+# If empty, only directly-assigned tasks are returned.
+staff_capabilities: []

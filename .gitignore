@@ -1,0 +1,36 @@
+# Ratatosk generated workspaces
+workspaces/
+
+# Local machine configuration
+config.local.yaml
+config.local.yml
+*.local.yaml
+*.local.yml
+settings.local.json
+
+# Runtime state and data
+state.json
+artifacts-cache/
+*.log
+
+# OAuth and token caches
+.oauth-token-cache.json
+*.oauth-token-cache.json
+oauth*.json
+
+# QGL-CLI build tool binaries (downloaded, not source)
+tools/QGL-CLI/
+
+# Libraries and dependencies
+node_modules/
+# Ignore device code log
+device-code.log
+
+# Temporary files created by AI tools and scripts
+# AI agents must write all scratch/output/prompt files here, not to the repo root.
+temp/
+state.json.bak*
+
+# Post-task operational learnings (local only)
+learnings/
+

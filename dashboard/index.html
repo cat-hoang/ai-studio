@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ratatosk Dashboard</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --accent: #0f3460;
+  --highlight: #e94560;
+  --text: #eee;
+  --text-dim: #888;
+  --success: #00b894;
+  --warning: #fdcb6e;
+  --error: #d63031;
+  --border: #2a2a4a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+.header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.header-left h1 { font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+.header-left .subtitle { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--text-dim); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-dot.connected { background: var(--success); }
+.status-dot.disconnected { background: var(--error); }
+.poller-bar { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.top-bar-layout { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); gap: 8px; align-items: stretch; }
+.top-bar-summary { min-width: 0; display: flex; }
+.top-bar-main { min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.poller-card { min-width: 220px; flex: 1 1 220px; display: flex; flex-direction: column; background: rgba(22, 33, 62, 0.45); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.poller-card-command { min-width: 360px; flex: 1 1 360px; border-color: rgba(146, 166, 193, 0.34); box-shadow: inset 4px 0 0 rgba(146, 166, 193, 0.55), 0 8px 18px rgba(0, 0, 0, 0.16); }
+.poller-card-autonomy { min-width: 320px; flex: 1 1 320px; border-color: rgba(139, 92, 246, 0.35); box-shadow: inset 4px 0 0 rgba(139, 92, 246, 0.7), 0 8px 18px rgba(0, 0, 0, 0.18); }
+.poller-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.poller-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.poller-state { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.poller-state-healthy { background: rgba(0, 184, 148, 0.18); color: #7fffd4; }
+.poller-state-running { background: rgba(52, 152, 219, 0.22); color: #8ad8ff; }
+.poller-state-error { background: rgba(214, 48, 49, 0.18); color: #ff9f9f; }
+.poller-state-stale { background: rgba(253, 203, 110, 0.18); color: #ffe39c; }
+.poller-state-disabled { background: rgba(99, 110, 114, 0.25); color: #c7d0d3; }
+.poller-state-idle { background: rgba(127, 143, 166, 0.18); color: #d5dbe3; }
+.poller-meta { font-size: 11px; color: var(--text-dim); line-height: 1.35; }
+.poller-actions { margin-top: auto; padding-top: 6px; display: flex; justify-content: flex-end; }
+.btn-poller { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-poller:hover { border-color: var(--highlight); color: #fff; }
+.autonomy-control-grid { display: grid; grid-template-columns: 1fr 108px; gap: 6px; margin-top: 6px; }
+.autonomy-control-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.autonomy-control-grid select,
+.autonomy-control-grid input { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+.autonomy-control-grid select:focus,
+.autonomy-control-grid input:focus { outline: none; border-color: #8b5cf6; }
+.attention-card { min-width: 260px; flex: 1 1 260px; background: rgba(22, 33, 62, 0.45); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.attention-summary { min-width: 0; width: 100%; height: 100%; padding: 8px 10px; background: rgba(15, 23, 42, 0.82); border-color: rgba(138, 216, 255, 0.28); box-shadow: inset 3px 0 0 rgba(138, 216, 255, 0.75); }
+.attention-card-empty { border-style: dashed; }
+.attention-card-actionable { background: rgba(22, 33, 62, 0.45); border-color: var(--border); box-shadow: none; }
+.attention-summary-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.attention-summary-column { display: flex; flex-direction: column; gap: 3px; min-width: 140px; flex: 1 1 140px; }
+.attention-detail-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.attention-detail-row .attention-card { flex: 0 1 360px; min-width: 260px; width: min(360px, 100%); max-width: 420px; }
+.attention-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.attention-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.attention-severity { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.attention-severity-error { background: rgba(214, 48, 49, 0.18); color: #ff9f9f; }
+.attention-severity-warning { background: rgba(253, 203, 110, 0.18); color: #ffe39c; }
+.attention-severity-info { background: rgba(52, 152, 219, 0.18); color: #8ad8ff; }
+.attention-meta { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
+.attention-card-actionable .attention-meta,
+.attention-summary .attention-meta { color: var(--text); }
+.attention-summary .attention-meta { font-size: 11px; line-height: 1.35; }
+.attention-card-actionable .attention-meta strong { color: #fff; }
+.attention-link { color: #fff; text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.4); }
+.attention-card-actionable .attention-link { color: #ffe39c; border-bottom-color: rgba(255, 227, 156, 0.55); }
+.attention-link:hover { border-bottom-color: #fff; }
+.command-card-body { display: flex; flex-direction: column; gap: 8px; }
+.command-card-inputs { display: flex; gap: 8px; }
+.command-card-inputs input { flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 14px; font-family: "Consolas", monospace; }
+.command-card-inputs input::placeholder { color: var(--text-dim); }
+.command-card-inputs input:focus { outline: none; border-color: var(--highlight); }
+.command-card-inputs button { background: var(--accent); color: var(--text); border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.command-card-inputs button:hover { background: var(--highlight); }
+.command-link { color: #8ad8ff; text-decoration: none; }
+.command-link:hover { text-decoration: underline; }
+.kanban { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; padding: 20px 24px; min-height: calc(100vh - 130px); }
+.column { background: rgba(22, 33, 62, 0.3); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; min-height: 200px; }
+.column-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; gap: 10px; }
+.column-header-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.column-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.count-badge { background: var(--accent); padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 400; }
+.column-body { padding: 8px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.column-note { margin: 0 8px 8px; padding: 8px 10px; background: rgba(15, 52, 96, 0.2); border: 1px solid rgba(52, 152, 219, 0.25); border-radius: 6px; font-size: 12px; color: #cfd7ff; line-height: 1.45; }
+.column-filter-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.column-filter-btn:hover { border-color: var(--highlight); color: #fff; }
+.column-filter-btn.is-active { border-color: rgba(225, 112, 85, 0.65); background: rgba(225, 112, 85, 0.16); color: #ffd2c7; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.job-heading { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.job-number { font-size: 16px; font-weight: 700; font-family: "Consolas", monospace; }
+.crikey-btn { display: inline-flex; align-items: center; align-self: center; margin-left: 2px; opacity: 0.7; transition: opacity 0.15s; flex-shrink: 0; }
+.crikey-btn:hover { opacity: 1; }
+.crikey-btn img { width: 16px; height: 16px; display: block; }
+.task-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(108, 92, 231, 0.18); color: #d9ccff; }
+.job-summary { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.badge-cdf { background: #2d5aa0; color: #fff; }
+.badge-cs { background: #a02d2d; color: #fff; }
+.badge-bug { background: #a0582d; color: #fff; }
+.badge-feature { background: #2da05a; color: #fff; }
+.badge-unknown { background: #555; color: #fff; }
+.badge-opus { background: #6c3ea0; color: #fff; }
+.badge-sonnet { background: #2d8a6e; color: #fff; }
+.zone-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.zone-1 { background: #d63031; }
+.zone-2 { background: #e17055; }
+.zone-3 { background: #fdcb6e; }
+.zone-4 { background: #00b894; }
+.card-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.4; }
+.report-summary { font-size: 12px; color: #cfd7ff; margin-bottom: 8px; line-height: 1.45; padding: 8px 10px; background: rgba(108, 92, 231, 0.12); border: 1px solid rgba(108, 92, 231, 0.3); border-radius: 6px; }
+.attention-inline { font-size: 12px; margin-bottom: 8px; line-height: 1.45; padding: 8px 10px; border-radius: 6px; }
+.attention-inline-warning { color: #ffe39c; background: rgba(253, 203, 110, 0.12); border: 1px solid rgba(253, 203, 110, 0.28); }
+.attention-inline-error { color: #ffb0b0; background: rgba(214, 48, 49, 0.12); border: 1px solid rgba(214, 48, 49, 0.28); }
+.card-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+.activity-badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.activity-starting { background: #7f8fa6; color: #fff; }
+.activity-workspace-verify { background: #636e72; color: #fff; }
+.activity-syncing { background: #3b82f6; color: #fff; }
+.activity-planning { background: #6c5ce7; color: #fff; }
+.activity-thinking { background: #0984e3; color: #fff; }
+.activity-researching { background: #2563eb; color: #fff; }
+.activity-triaging { background: #0ea5e9; color: #fff; }
+.activity-designing { background: #8b5cf6; color: #fff; }
+.activity-running { background: #00b894; color: #fff; }
+.activity-implementing { background: #10b981; color: #fff; }
+.activity-coding { background: #00b894; color: #fff; }
+.activity-building { background: #14b8a6; color: #0b1320; }
+.activity-validating { background: #2dd4bf; color: #0b1320; }
+.activity-testing { background: #00cec9; color: #0b1320; }
+.activity-documenting { background: #f59e0b; color: #1a1a1a; }
+.activity-reviewing { background: #6c3ea0; color: #fff; }
+.activity-creating-pr { background: #7c3aed; color: #fff; }
+.activity-waiting-review { background: #a855f7; color: #fff; }
+.activity-awaiting-user-input { background: #ffb900; color: #1a1a1a; }
+.activity-input-received { background: #55efc4; color: #0b1320; }
+.activity-paused { background: #7f8fa6; color: #fff; }
+.activity-retrying { background: #fb7185; color: #fff; }
+.activity-blocked { background: #e17055; color: #fff; }
+.activity-queued { background: #636e72; color: #fff; }
+.activity-startable { background: #74b9ff; color: #0b1320; }
+.activity-completed { background: var(--success); color: #fff; }
+.activity-failed { background: var(--error); color: #fff; }
+.phase-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin: 6px 0; overflow: hidden; }
+.phase-bar-fill { height: 100%; background: var(--highlight); border-radius: 2px; transition: width 0.5s ease; }
+.phase-label { font-size: 11px; color: var(--text-dim); }
+.input-request { margin-top: 8px; padding: 8px 10px; background: rgba(255, 184, 0, 0.08); border: 1px solid rgba(255, 184, 0, 0.35); border-radius: 6px; }
+.input-request-title { font-size: 12px; font-weight: 700; color: var(--warning); margin-bottom: 4px; }
+.input-request-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.input-request-pill { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.input-request-pill-type { background: rgba(59, 130, 246, 0.18); color: #8ad8ff; }
+.input-request-pill-mode { background: rgba(108, 92, 231, 0.18); color: #d9ccff; }
+.input-request-pill-state { background: rgba(99, 110, 114, 0.28); color: #f1f2f6; }
+.input-request-pill-severity-low { background: rgba(0, 184, 148, 0.18); color: #7fffd4; }
+.input-request-pill-severity-medium { background: rgba(253, 203, 110, 0.18); color: #ffe39c; }
+.input-request-pill-severity-high { background: rgba(225, 112, 85, 0.2); color: #ffc6b3; }
+.input-request-pill-severity-critical { background: rgba(214, 48, 49, 0.2); color: #ffb0b0; }
+.input-request-body { font-size: 12px; line-height: 1.4; margin-bottom: 6px; }
+.input-request-options { font-size: 11px; color: var(--text-dim); }
+.input-request-state { font-size: 11px; color: var(--text-dim); margin-top: 6px; line-height: 1.4; }
+.card-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.btn { padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn-green { background: var(--success); color: #fff; }
+.btn-blue { background: #3498db; color: #fff; }
+.btn-purple { background: #6c5ce7; color: #fff; }
+.btn-gray { background: #555; color: #fff; }
+.btn-orange { background: #e17055; color: #fff; }
+.btn-teal { background: #00897b; color: #fff; }
+.pr-link { color: #3498db; text-decoration: none; font-size: 12px; }
+.pr-link:hover { text-decoration: underline; }
+.card-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.error-msg { color: var(--error); font-size: 12px; margin-top: 4px; }
+.sub-agents { font-size: 12px; color: var(--text-dim); }
+.source-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.source-pill { padding: 2px 8px; border-radius: 999px; background: rgba(15, 52, 96, 0.65); color: #cfd7ff; font-size: 11px; }
+.batch-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.batch-pill { padding: 2px 8px; border-radius: 999px; background: rgba(108, 92, 231, 0.18); color: #d9ccff; font-size: 11px; }
+.batch-pill-score-high { background: rgba(0, 184, 148, 0.18); color: #7fffd4; }
+.batch-pill-score-medium { background: rgba(253, 203, 110, 0.18); color: #ffe39c; }
+.batch-pill-score-low { background: rgba(99, 110, 114, 0.28); color: #d5dbe3; }
+.batch-line { font-size: 12px; color: #cfd7ff; margin-bottom: 8px; line-height: 1.45; }
+.task-selector { margin-bottom: 8px; }
+.task-selector label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.task-selector select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+.log-toggle { font-size: 11px; color: var(--text-dim); cursor: pointer; margin-top: 6px; user-select: none; }
+.log-toggle:hover { color: var(--text); }
+.log-viewer { display: none; margin-top: 6px; background: #0d1117; border-radius: 4px; padding: 8px; font-family: "Consolas", monospace; font-size: 11px; max-height: 150px; overflow-y: auto; color: #8b949e; }
+.log-viewer.open { display: block; }
+.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 10px 16px; border-radius: 6px; font-size: 13px; color: #fff; animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s; }
+.toast-success { background: var(--success); }
+.toast-error { background: var(--error); }
+.toast-info { background: var(--accent); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* ── Light theme ── */
+body.light {
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --accent: #2563eb;
+  --highlight: #dc2626;
+  --text: #1e293b;
+  --text-dim: #64748b;
+  --success: #059669;
+  --warning: #b45309;
+  --error: #dc2626;
+  --border: #cbd5e1;
+}
+body.light .poller-card { background: rgba(255,255,255,0.85); }
+body.light .poller-card-command { border-color: rgba(80,120,180,0.35); box-shadow: inset 4px 0 0 rgba(80,120,180,0.6), 0 4px 12px rgba(0,0,0,0.07); }
+body.light .poller-card-autonomy { border-color: rgba(124,58,237,0.3); box-shadow: inset 4px 0 0 rgba(124,58,237,0.55), 0 4px 12px rgba(0,0,0,0.07); }
+body.light .attention-card { background: rgba(255,255,255,0.85); }
+body.light .attention-summary { background: rgba(241,245,249,0.95); border-color: rgba(37,99,235,0.25); box-shadow: inset 3px 0 0 rgba(37,99,235,0.6); }
+body.light .attention-card-actionable { background: #fff; }
+body.light .attention-card-actionable .attention-meta strong { color: #1e293b; }
+body.light .attention-link { color: #1e293b; border-bottom-color: rgba(30,41,59,0.3); }
+body.light .attention-card-actionable .attention-link { color: #1d4ed8; border-bottom-color: rgba(29,78,216,0.4); }
+body.light .column { background: rgba(226,232,240,0.45); }
+body.light .column-note { background: rgba(37,99,235,0.07); border-color: rgba(37,99,235,0.2); color: #1e40af; }
+body.light .column-filter-btn { background: rgba(255,255,255,0.92); border-color: #cbd5e1; color: #475569; }
+body.light .column-filter-btn:hover { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+body.light .column-filter-btn.is-active { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+body.light .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+body.light .task-pill { background: rgba(124,58,237,0.1); color: #5b21b6; }
+body.light .count-badge { background: #dbeafe; color: #1d4ed8; }
+body.light .report-summary { color: #1e40af; background: rgba(37,99,235,0.06); border-color: rgba(37,99,235,0.2); }
+body.light .attention-inline-warning { color: #92400e; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
+body.light .attention-inline-error { color: #991b1b; background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.2); }
+body.light .poller-state-healthy { background: rgba(5,150,105,0.12); color: #065f46; }
+body.light .poller-state-running { background: rgba(37,99,235,0.12); color: #1e40af; }
+body.light .poller-state-error { background: rgba(220,38,38,0.1); color: #991b1b; }
+body.light .poller-state-stale { background: rgba(180,83,9,0.1); color: #92400e; }
+body.light .poller-state-disabled { background: rgba(100,116,139,0.12); color: #475569; }
+body.light .poller-state-idle { background: rgba(100,116,139,0.1); color: #475569; }
+body.light .attention-severity-error { background: rgba(220,38,38,0.1); color: #991b1b; }
+body.light .attention-severity-warning { background: rgba(180,83,9,0.1); color: #92400e; }
+body.light .attention-severity-info { background: rgba(37,99,235,0.1); color: #1e40af; }
+body.light .input-request-pill-type { background: rgba(37,99,235,0.1); color: #1e40af; }
+body.light .input-request-pill-mode { background: rgba(124,58,237,0.1); color: #5b21b6; }
+body.light .input-request-pill-state { background: rgba(100,116,139,0.1); color: #475569; }
+body.light .input-request-pill-severity-low { background: rgba(5,150,105,0.1); color: #065f46; }
+body.light .input-request-pill-severity-medium { background: rgba(180,83,9,0.1); color: #92400e; }
+body.light .input-request-pill-severity-high { background: rgba(220,38,38,0.1); color: #991b1b; }
+body.light .input-request-pill-severity-critical { background: rgba(185,28,28,0.12); color: #7f1d1d; }
+body.light .source-pill { background: rgba(37,99,235,0.1); color: #1e40af; }
+body.light .batch-pill { background: rgba(124,58,237,0.1); color: #5b21b6; }
+body.light .batch-pill-score-high { background: rgba(5,150,105,0.1); color: #065f46; }
+body.light .batch-pill-score-medium { background: rgba(180,83,9,0.1); color: #92400e; }
+body.light .batch-pill-score-low { background: rgba(100,116,139,0.1); color: #475569; }
+body.light .batch-line { color: #1e40af; }
+body.light .log-viewer { background: #f8fafc; color: #475569; }
+body.light .btn-poller:hover { color: #1e293b; }
+body.light .command-card-inputs button { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+body.light .command-card-inputs button:hover { background: #bfdbfe; color: #1e3a8a; }
+body.light .btn { border: 1px solid transparent; }
+body.light .btn-green { background: #d1fae5; color: #047857; border-color: #a7f3d0; }
+body.light .btn-blue { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+body.light .btn-purple { background: #ede9fe; color: #6d28d9; border-color: #ddd6fe; }
+body.light .btn-gray { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
+body.light .btn-orange { background: #ffedd5; color: #c2410c; border-color: #fdba74; }
+body.light .btn-teal { background: #ccfbf1; color: #0f766e; border-color: #99f6e4; }
+body.light .badge-cdf { background: #dbeafe; color: #1d4ed8; }
+body.light .badge-cs { background: #fee2e2; color: #b91c1c; }
+body.light .badge-bug { background: #ffedd5; color: #c2410c; }
+body.light .badge-feature { background: #dcfce7; color: #15803d; }
+body.light .badge-unknown { background: #e2e8f0; color: #475569; }
+body.light .badge-opus { background: #ede9fe; color: #6d28d9; }
+body.light .badge-sonnet { background: #ccfbf1; color: #0f766e; }
+body.light .pr-link { color: #1d4ed8; }
+body.light .theme-toggle { background: rgba(255,255,255,0.92); border-color: #cbd5e1; color: #475569; }
+body.light .theme-toggle:hover { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+body.light .command-link { color: #1d4ed8; }
+body.light #instructOverlay > div { background: #ffffff !important; border-color: #e2e8f0 !important; box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important; }
+body.light #instructModalTitle { color: #1e293b !important; }
+body.light #instructOverlay > div > div:first-child button { color: #64748b !important; }
+body.light #instructLoadingMsg { color: #64748b !important; }
+body.light #instructErrorMsg { color: #b91c1c !important; }
+body.light #instructEditorWrap > div:first-child { color: #64748b !important; }
+body.light #instructTextarea { background: #f8fafc !important; color: #1e293b !important; border-color: #cbd5e1 !important; }
+
+/* theme toggle button */
+.theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: 12px; font-weight: 600; transition: border-color 0.15s, color 0.15s; user-select: none; }
+.theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+@media (max-width: 1600px) { .kanban { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1200px) { .kanban { grid-template-columns: repeat(2, 1fr); } .top-bar-layout { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .kanban { grid-template-columns: 1fr; }
+  .top-bar-main { flex-direction: column; }
+  .top-bar-summary { display: block; }
+  .poller-card, .poller-card-command, .poller-card-autonomy, .attention-card, .attention-summary { min-width: 0; width: 100%; max-width: none; }
+  .autonomy-control-grid { grid-template-columns: 1fr; }
+  .command-card-inputs { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <h1>Ratatosk</h1>
+    <div class="subtitle">The squirrel that runs between worlds &mdash; orchestrating agents across branches</div>
+  </div>
+  <div class="header-right">
+    <span id="dateDisplay"></span>
+    <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">☀ Light</button>
+    <span><span class="status-dot" id="statusDot"></span><span id="statusText">Connecting...</span></span>
+  </div>
+</div>
+
+<div class="poller-bar" id="pollerBar"></div>
+
+<div class="kanban">
+  <div class="column">
+    <div class="column-header">
+      <div class="column-header-main">Startable <span class="count-badge" id="startableCount">0</span></div>
+      <div class="column-header-actions"><button class="column-filter-btn" id="startableNeverAutoFilterBtn" onclick="toggleStartableNeverAutoFilter()">Hide Never Auto</button></div>
+    </div>
+    <div class="column-body" id="startableCol"></div>
+  </div>
+  <div class="column">
+    <div class="column-header">Waiting Queue <span class="count-badge" id="waitingCount">0</span></div>
+    <div class="column-body" id="waitingCol"></div>
+  </div>
+  <div class="column">
+    <div class="column-header">Running <span class="count-badge" id="runningCount">0</span></div>
+    <div class="column-body" id="runningCol"></div>
+  </div>
+  <div class="column">
+    <div class="column-header">Completed <span class="count-badge" id="completedCount">0</span></div>
+    <div class="column-body" id="completedCol"></div>
+  </div>
+  <div class="column">
+    <div class="column-header">Failed <span class="count-badge" id="failedCount">0</span></div>
+    <div class="column-body" id="failedCol"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Command Help Modal -->
+<div id="commandHelpOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;" onclick="if(event.target===this)toggleCommandHelp()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#16213e;border:1px solid #2a2a4a;border-radius:10px;padding:28px 32px;min-width:520px;max-width:700px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:16px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#eee;">Command Syntax</h2>
+      <button onclick="toggleCommandHelp()" style="background:transparent;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:1px solid #2a2a4a;">
+        <th style="text-align:left;padding:6px 12px 8px 0;color:#8ad8ff;font-weight:600;">Command</th>
+        <th style="text-align:left;padding:6px 0 8px 0;color:#8ad8ff;font-weight:600;">Description</th>
+      </tr></thead>
+      <tbody id="cmdHelpRows"></tbody>
+    </table>
+    <div style="margin-top:16px;font-size:11px;color:#666;">Click outside or &times; to close &bull; Stays open during auto-refresh</div>
+  </div>
+</div>
+
+<!-- Notes Modal (read / edit ediProd task notes) -->
+<div id="instructOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;" onclick="if(event.target===this)closeInstructModal()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#16213e;border:1px solid #2a2a4a;border-radius:10px;padding:24px 28px;width:640px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0;">
+      <h2 id="instructModalTitle" style="font-size:15px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#eee;margin:0;">Task Notes</h2>
+      <button onclick="closeInstructModal()" style="background:transparent;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div id="instructLoadingMsg" style="display:none;color:#aaa;font-size:13px;padding:12px 0;">Loading notes&hellip;</div>
+    <div id="instructErrorMsg" style="display:none;color:#f87171;font-size:13px;padding:8px 0;"></div>
+    <div id="instructEditorWrap" style="display:none;flex-direction:column;min-height:0;flex:1;">
+      <div style="font-size:11px;color:#777;margin-bottom:6px;">Edit the full task notes. The task agent will read these before starting work. Content is stored as plain text/markdown.</div>
+      <textarea id="instructTextarea" style="flex:1;min-height:340px;resize:vertical;width:100%;box-sizing:border-box;background:#0d1526;color:#d0d8f0;border:1px solid #2a3a5a;border-radius:6px;padding:10px 12px;font-family:Consolas,monospace;font-size:13px;line-height:1.55;outline:none;" placeholder="Write instructions for the task agent here..."></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-shrink:0;">
+      <button id="instructSaveBtn" class="btn btn-blue" onclick="saveInstructions()" disabled style="min-width:120px;">Save</button>
+      <button class="btn btn-gray" onclick="closeInstructModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let lastState = null;
+let notificationsEnabled = false;
+const STARTABLE_FILTER_STORAGE_KEY = 'ratatosk-hide-never-auto-startable';
+const THEME_STORAGE_KEY = 'ratatosk-theme';
+let hideNeverAutoStartable = false;
+let commandDraft = '';
+let commandHelpOpen = false;
+let lastEtag = null;
+let lastColumnHtml = {};
+
+function setColumnIfChanged(id, html) {
+  if (lastColumnHtml[id] === html) return;
+  lastColumnHtml[id] = html;
+  document.getElementById(id).innerHTML = html;
+}
+
+// Apply saved theme immediately to avoid flash
+(function() {
+  try {
+    if (window.localStorage.getItem(THEME_STORAGE_KEY) === 'light') {
+      document.body.classList.add('light');
+    }
+  } catch(e) {}
+})();
+
+function updateThemeButton() {
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  const isLight = document.body.classList.contains('light');
+  btn.textContent = isLight ? '🌙 Dark' : '☀ Light';
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  try { window.localStorage.setItem(THEME_STORAGE_KEY, isLight ? 'light' : 'dark'); } catch(e) {}
+  updateThemeButton();
+}
+
+// Initialise button label after DOM ready
+document.addEventListener('DOMContentLoaded', updateThemeButton);
+// Also update immediately in case DOMContentLoaded already fired
+updateThemeButton();
+
+const COMMAND_HELP = [
+  ['start <WI> [--task <seq>]',                    'Queue job and immediately launch a worker'],
+  ['queue <WI> [--task <seq>] [type] [desc]',      'Add to the waiting queue without launching'],
+  ['resume <WI> [--task <seq>]',                   'Resume a paused worker'],
+  ['retry <WI> [--task <seq>]',                    'Retry a failed job'],
+  ['cleanup <WI> [--task <seq>]',                  'Remove job card from state'],
+  ['notes <WI> --task <seq>',                      'Read ediProd task notes'],
+  ['reply <WI> <message>',                         'Send a reply to a worker awaiting input'],
+  ['answer <WI> <message>',                        'Alias for reply'],
+  ['status [WI] [--task <seq>]',                   'Show job status; omit WI for full summary'],
+  ['never-auto <WI> --task <seq>',                 'Prevent a task from being auto-started'],
+  ['allow-auto <WI> --task <seq>',                 'Remove never-auto flag from a task'],
+  ['help',                                         'Show command list'],
+];
+
+function toggleCommandHelp() {
+  commandHelpOpen = !commandHelpOpen;
+  const overlay = document.getElementById('commandHelpOverlay');
+  if (!overlay) return;
+  if (commandHelpOpen) {
+    const tbody = document.getElementById('cmdHelpRows');
+    if (tbody) {
+      tbody.innerHTML = COMMAND_HELP.map(([cmd, desc]) =>
+        '<tr style="border-bottom:1px solid #1a2040;">' +
+          '<td style="padding:7px 16px 7px 0;font-family:Consolas,monospace;color:#d9ccff;white-space:nowrap;">' + escapeHtml(cmd) + '</td>' +
+          '<td style="padding:7px 0;color:#ccc;">' + escapeHtml(desc) + '</td>' +
+        '</tr>'
+      ).join('');
+    }
+    overlay.style.display = 'block';
+  } else {
+    overlay.style.display = 'none';
+  }
+}
+
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission().then(p => { notificationsEnabled = p === 'granted'; });
+} else if ('Notification' in window && Notification.permission === 'granted') {
+  notificationsEnabled = true;
+}
+
+try {
+  hideNeverAutoStartable = window.localStorage.getItem(STARTABLE_FILTER_STORAGE_KEY) === 'true';
+} catch (e) {
+  hideNeverAutoStartable = false;
+}
+
+// Date display
+document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+function showToast(msg, type) {
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function captureCommandInputState() {
+  const input = document.getElementById('cmdInput');
+  if (!input) {
+    return {
+      value: commandDraft,
+      focused: false,
+      selectionStart: 0,
+      selectionEnd: 0,
+    };
+  }
+
+  commandDraft = input.value;
+  return {
+    value: input.value,
+    focused: document.activeElement === input,
+    selectionStart: typeof input.selectionStart === 'number' ? input.selectionStart : input.value.length,
+    selectionEnd: typeof input.selectionEnd === 'number' ? input.selectionEnd : input.value.length,
+  };
+}
+
+function restoreCommandInputState(state) {
+  const input = document.getElementById('cmdInput');
+  if (!input || !state) return;
+  const nextValue = typeof state.value === 'string' ? state.value : commandDraft;
+  input.value = nextValue;
+  commandDraft = nextValue;
+  if (state.focused) {
+    input.focus();
+    if (typeof input.setSelectionRange === 'function') {
+      input.setSelectionRange(state.selectionStart, state.selectionEnd);
+    }
+  }
+}
+
+function getVisibleStartableJobs(startableJobs) {
+  const items = Array.isArray(startableJobs) ? startableJobs : [];
+  return hideNeverAutoStartable ? items.filter(job => !job.neverAutoStart) : items;
+}
+
+function updateStartableFilterButton() {
+  const button = document.getElementById('startableNeverAutoFilterBtn');
+  if (!button) return;
+  button.textContent = hideNeverAutoStartable ? 'Show Never Auto' : 'Hide Never Auto';
+  button.classList.toggle('is-active', hideNeverAutoStartable);
+}
+
+function toggleStartableNeverAutoFilter() {
+  hideNeverAutoStartable = !hideNeverAutoStartable;
+  try {
+    window.localStorage.setItem(STARTABLE_FILTER_STORAGE_KEY, hideNeverAutoStartable ? 'true' : 'false');
+  } catch (e) {
+  }
+  updateStartableFilterButton();
+  if (lastState) {
+    const startable = lastState.startableJobs || [];
+    const visibleStartable = getVisibleStartableJobs(startable);
+    document.getElementById('startableCount').textContent = visibleStartable.length;
+    const html = renderStartableBody(startable, lastState.startableJobsStatus || {});
+    lastColumnHtml['startableCol'] = html;
+    document.getElementById('startableCol').innerHTML = html;
+  }
+}
+
+function formatPollerTimestamp(value) {
+  if (!value) return 'never';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleTimeString();
+}
+
+function getPollerLabel(poller) {
+  const health = (poller && poller.health) || 'disabled';
+  if (health === 'healthy') return 'Healthy';
+  if (health === 'running') return 'Polling';
+  if (health === 'error') return 'Error';
+  if (health === 'stale') return 'Stale';
+  if (health === 'idle') return 'Idle';
+  return 'Disabled';
+}
+
+function getPollerDisplayName(name) {
+  const key = String(name || '').toLowerCase();
+  if (key === 'email') return 'Mail Poller';
+  if (key === 'teams') return 'Teams Poller';
+  if (key === 'startable') return 'Startable Poller';
+  return key ? key.replace(/(^|-)([a-z])/g, (_, sep, ch) => (sep ? ' ' : '') + ch.toUpperCase()) : 'Poller';
+}
+
+function renderCommandCard() {
+  let html = '<div class="poller-card poller-card-command">';
+  html += '<div class="poller-top">';
+  html += '<span class="poller-name">Commands</span>';
+  html += '<span class="poller-state poller-state-idle" style="cursor:pointer;" onclick="toggleCommandHelp()" title="Click to see command syntax">Manual (?)</span>';
+  html += '</div>';
+  html += '<div class="command-card-body">';
+  html += '<div class="poller-meta">Run commands: start, queue, resume, retry, cleanup, reply, status, never-auto, allow-auto, notes. <a href="#" class="command-link" onclick="toggleCommandHelp();return false;">View syntax</a></div>';
+  html += '<div class="command-card-inputs">';
+  html += '<input type="text" id="cmdInput" value="' + escapeAttribute(commandDraft) + '" placeholder="start WI00975129 --task 423 | never-auto WI00971062 --task 256" />';
+  html += '<button onclick="executeCommand()">Execute</button>';
+  html += '</div>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderAutonomyControlCard(healthChecks) {
+  const autonomyMode = ((healthChecks && healthChecks.autonomyMode) || 'suggestions-only').toLowerCase();
+  const maxConcurrentWorkers = Number((healthChecks && healthChecks.maxConcurrentWorkers) || 1);
+  const autoLaunch = (healthChecks && healthChecks.autoLaunch) || {};
+  let html = '<div class="poller-card poller-card-autonomy">';
+  html += '<div class="poller-top">';
+  html += '<span class="poller-name">Autonomy</span>';
+  html += '<span class="poller-state poller-state-' + escapeHtml((autoLaunch.state === 'blocked' ? 'stale' : autoLaunch.state === 'launching' ? 'running' : 'healthy')) + '">' + escapeHtml(autoLaunch.state || 'idle') + '</span>';
+  html += '</div>';
+  if (autoLaunch.detail) {
+    html += '<div class="poller-meta">' + escapeHtml(autoLaunch.detail) + '</div>';
+  }
+  html += '<div class="autonomy-control-grid">';
+  html += '<label>Mode<select id="autonomyModeSelect" onchange="updateAutonomyConfigFromCard()">';
+  [['suggestions-only', 'Manual'], ['auto', 'Auto']].forEach(([value, label]) => {
+    html += '<option value="' + escapeAttribute(value) + '"' + (value === autonomyMode ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+  });
+  html += '</select></label>';
+  html += '<label>Max workers<input id="autonomyMaxWorkersInput" type="number" min="1" step="1" value="' + escapeAttribute(String(maxConcurrentWorkers)) + '" onchange="updateAutonomyConfigFromCard()" /></label>';
+  html += '</div>';
+  return html + '</div>';
+}
+
+function renderPollerCard(name, poller) {
+  if (!poller) return '';
+
+  const details = [];
+  details.push('Interval: ' + Math.round((poller.intervalMs || 0) / 1000) + 's');
+  details.push('Last attempt: ' + formatPollerTimestamp(poller.lastAttemptAt));
+  details.push('Last success: ' + formatPollerTimestamp(poller.lastSuccessAt));
+  if (poller.disabledReason) details.push('Disabled: ' + poller.disabledReason);
+  if (poller.lastError) details.push('Error: ' + poller.lastError);
+  if (Array.isArray(poller.warnings) && poller.warnings.length > 0) details.push('Warnings: ' + poller.warnings.join(' | '));
+  if (poller.reviveCount) details.push('Revives: ' + poller.reviveCount);
+
+  let html = '<div class="poller-card">';
+  html += '<div class="poller-top">';
+  html += '<span class="poller-name">';
+  const log = poller.pollerLog || null;
+  if (log && log.status) {
+    const dotColor = log.status === 'ok' ? '#22c55e' : log.status === 'skipped' ? '#eab308' : '#ef4444';
+    html += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + dotColor + ';margin-right:6px;vertical-align:middle;"></span>';
+  }
+  html += escapeHtml(getPollerDisplayName(name)) + '</span>';
+  html += '<span class="poller-state poller-state-' + escapeHtml((poller.health || 'disabled').toLowerCase()) + '">' + escapeHtml(getPollerLabel(poller)) + '</span>';
+  html += '</div>';
+  if (log && log.status) {
+    const statusLabel = log.status === 'ok' ? 'OK' : log.status === 'skipped' ? 'Skipped' : 'Error';
+    const timeStr = log.lastPollAt ? new Date(log.lastPollAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase() : '';
+    const logLine = statusLabel + ' - ' + escapeHtml(log.message || '') + (timeStr ? ' (' + timeStr + ')' : '');
+    html += '<div class="poller-meta" style="margin-top:2px;">' + logLine + '</div>';
+  }
+  html += '<div class="poller-meta">' + details.map(item => escapeHtml(item)).join('<br>') + '</div>';
+  html += '<div class="poller-actions"><button class="btn-poller" onclick=\'revivePoller(' + escapeAttribute(JSON.stringify(name)) + ')\'>' + (poller.inFlight ? 'Restart' : 'Revive') + '</button></div>';
+  html += '</div>';
+  return html;
+}
+
+function renderPollerBar(pollers, healthChecks) {
+  const entries = Object.entries(pollers || {});
+  if (entries.length === 0) {
+    return renderCommandCard() + renderAutonomyControlCard(healthChecks) + '<div class="poller-card"><div class="poller-meta">No pollers configured.</div></div>';
+  }
+  const orderedCards = [renderCommandCard()];
+  const remainingEntries = [...entries];
+  const startableIndex = remainingEntries.findIndex(([name]) => String(name).toLowerCase() === 'startable');
+
+  remainingEntries.forEach(([name, poller], index) => {
+    orderedCards.push(renderPollerCard(name, poller));
+    if (index === startableIndex) {
+      orderedCards.push(renderAutonomyControlCard(healthChecks));
+    }
+  });
+
+  if (startableIndex < 0) {
+    orderedCards.push(renderAutonomyControlCard(healthChecks));
+  }
+
+  return orderedCards.join('');
+}
+
+function renderTopBar(pollers, items, healthChecks) {
+  const actionableAttention = renderAttentionBar(items);
+  let html = (
+    '<div class="top-bar-layout">' +
+      '<div class="top-bar-summary">' + renderAttentionSummaryCard(healthChecks) + '</div>' +
+      '<div class="top-bar-main">' + renderPollerBar(pollers, healthChecks) + '</div>' +
+    '</div>'
+  );
+  if (actionableAttention) {
+    html += '<div class="attention-detail-row">' + actionableAttention + '</div>';
+  }
+  return html;
+}
+
+function renderAttentionSummaryCard(healthChecks) {
+  const overall = (healthChecks && healthChecks.status) || 'ready';
+  const notificationSummary = [
+    'Worker CLI: ' + ((healthChecks && healthChecks.workerCli) || 'unknown'),
+    'Autonomy: ' + ((healthChecks && healthChecks.autonomyMode) || 'suggestions-only'),
+    'Auto-launch: ' + (((healthChecks && healthChecks.autoLaunch && healthChecks.autoLaunch.state) || 'idle')),
+    'Teams: ' + ((((healthChecks && healthChecks.notifications && healthChecks.notifications.teamsChannel)) || (((healthChecks && healthChecks.notifications && healthChecks.notifications.teamsConfigured) ? 'configured' : 'not configured')))),
+    'Email: ' + (((healthChecks && healthChecks.notifications && healthChecks.notifications.emailConfigured) ? 'configured' : 'not configured')),
+    'Stale workers: ' + (((healthChecks && healthChecks.staleWorkers) || 0)),
+    'Cleanup blocked: ' + (((healthChecks && healthChecks.cleanupBlocked) || 0)),
+    'Paused resume candidates: ' + (((healthChecks && healthChecks.pausedResumeCandidates) || 0)),
+  ];
+  const summaryColumns = [
+    notificationSummary.filter((_, index) => index % 2 === 0),
+    notificationSummary.filter((_, index) => index % 2 === 1),
+  ].filter(column => column.length > 0);
+  return (
+    '<div class="attention-card attention-summary">' +
+      '<div class="attention-top">' +
+        '<span class="attention-name">Needs Attention</span>' +
+        '<span class="attention-severity attention-severity-' + escapeHtml(overall === 'ready' ? 'info' : 'warning') + '">' + escapeHtml(overall) + '</span>' +
+      '</div>' +
+      '<div class="attention-meta attention-summary-grid">' +
+        summaryColumns.map(column => (
+          '<div class="attention-summary-column">' + column.map(item => '<div>' + escapeHtml(item) + '</div>').join('') + '</div>'
+        )).join('') +
+      '</div>' +
+      '<div class="poller-actions"><button class="btn-poller" onclick="restartServer()" title="Restart dashboard server via PM2">Restart Server</button></div>' +
+    '</div>'
+  );
+}
+
+function renderAttentionBar(items) {
+  const attentionItems = Array.isArray(items) ? items : [];
+  if (attentionItems.length === 0) {
+    return '';
+  }
+  return attentionItems.map(item => {
+    const severity = (item.severity || 'info').toLowerCase();
+    const title = renderLinkedJobText(item.title || '', item.jobNumber || '', item.jobUrl || '');
+    const detail = renderLinkedJobText(item.detail || '', item.jobNumber || '', item.jobUrl || '');
+    return (
+      '<div class="attention-card attention-card-actionable attention-card-' + escapeHtml(severity) + '">' +
+        '<div class="attention-meta">' +
+          '<div><strong>' + title + '</strong>' +
+          ' <span class="attention-severity attention-severity-' + escapeHtml(severity) + '">' + escapeHtml(severity) + '</span></div>' +
+          (detail ? ('<div>' + detail + '</div>') : '') +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function formatDuration(startStr, endStr) {
+  if (!startStr) return '';
+  const start = new Date(startStr);
+  const end = endStr ? new Date(endStr) : new Date();
+  const ms = end - start;
+  const mins = Math.floor(ms / 60000);
+  const hrs = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (hrs > 0) return hrs + 'h ' + m + 'm';
+  return m + 'm';
+}
+
+function getTaskBadgeClass(taskType) {
+  const t = (taskType || '').toLowerCase();
+  if (t.includes('cdf')) return 'badge-cdf';
+  if (t.includes('cs')) return 'badge-cs';
+  if (t.includes('bug')) return 'badge-bug';
+  if (t.includes('feature')) return 'badge-feature';
+  return 'badge-unknown';
+}
+
+function getZoneClass(zone) {
+  const z = parseInt(zone);
+  if (z === 1) return 'zone-1';
+  if (z === 2) return 'zone-2';
+  if (z === 3) return 'zone-3';
+  if (z === 4) return 'zone-4';
+  return '';
+}
+
+function getPhasePercent(phase) {
+  const phases = ['init', 'analysis', 'planning', 'implementation', 'testing', 'pr-creation', 'complete'];
+  const idx = phases.indexOf((phase || '').toLowerCase());
+  if (idx < 0) return 10;
+  return Math.round(((idx + 1) / phases.length) * 100);
+}
+
+function getActivityInfo(item, type) {
+  if (type === 'startable') {
+    return { key: 'startable', label: 'startable' };
+  }
+  if (type === 'waiting') {
+    return { key: 'queued', label: 'queued' };
+  }
+
+  const explicit = (item.activityStatus || '').toLowerCase();
+  if (explicit) {
+    return {
+      key: explicit,
+      label: explicit.replace(/-/g, ' ')
+    };
+  }
+
+  const status = (item.status || '').toLowerCase();
+  const phase = (item.phase || '').toLowerCase();
+  if (status === 'paused') return { key: 'paused', label: 'paused' };
+  if (phase === 'starting' || phase === 'workspace-verify') return { key: 'workspace-verify', label: 'workspace verify' };
+  if (phase === 'sync') return { key: 'syncing', label: 'syncing' };
+  if (status === 'waiting-user-input' || (item.userInputRequest && item.userInputRequest.state === 'pending')) {
+    return { key: 'awaiting-user-input', label: 'awaiting input' };
+  }
+  if (status === 'failed' || phase === 'failed') return { key: 'failed', label: 'failed' };
+  if (status === 'done' || phase === 'completed') return { key: 'completed', label: 'completed' };
+  if (phase === 'analysis') return { key: 'researching', label: 'analysis' };
+  if (phase === 'design') return { key: 'designing', label: 'design' };
+  if (phase === 'planning') return { key: 'planning', label: 'planning' };
+  if (phase === 'build') return { key: 'building', label: 'build' };
+  if (phase === 'build-verify') return { key: 'validating', label: 'build verify' };
+  if (phase === 'testing') return { key: 'testing', label: 'testing' };
+  if (phase === 'review') return { key: 'reviewing', label: 'review' };
+  if (phase === 'pr-creation') return { key: 'creating-pr', label: 'pr creation' };
+  if (phase === 'coding') return { key: 'implementing', label: 'coding' };
+  return { key: 'running', label: phase || status || 'running' };
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function escapeAttribute(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function formatInputTimestamp(value) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}
+
+function titleCaseInput(value) {
+  return String(value || '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, ch => ch.toUpperCase());
+}
+
+function renderUserInputBlock(request, titleText) {
+  if (!request || !request.question) return '';
+
+  const resolutionState = (request.resolutionState || request.state || '').toLowerCase();
+  const metaParts = [];
+  if (request.questionType) {
+    metaParts.push('<span class="input-request-pill input-request-pill-type">' + escapeHtml(titleCaseInput(request.questionType)) + '</span>');
+  }
+  if (request.severity) {
+    metaParts.push('<span class="input-request-pill input-request-pill-severity-' + escapeAttribute(String(request.severity).toLowerCase()) + '">' + escapeHtml(titleCaseInput(request.severity)) + '</span>');
+  }
+  if (request.answerMode) {
+    metaParts.push('<span class="input-request-pill input-request-pill-mode">' + escapeHtml(titleCaseInput(request.answerMode)) + '</span>');
+  }
+  if (resolutionState) {
+    metaParts.push('<span class="input-request-pill input-request-pill-state">' + escapeHtml(titleCaseInput(resolutionState)) + '</span>');
+  }
+
+  let html = '<div class="input-request">';
+  html += '<div class="input-request-title">' + escapeHtml(titleText || 'User input needed') + '</div>';
+  if (metaParts.length > 0) {
+    html += '<div class="input-request-meta">' + metaParts.join('') + '</div>';
+  }
+  html += '<div class="input-request-body">' + escapeHtml(request.question) + '</div>';
+  if (Array.isArray(request.options) && request.options.length > 0) {
+    html += '<div class="input-request-options">Options: ' + escapeHtml(request.options.join(' | ')) + '</div>';
+  }
+
+  const statusParts = [];
+  if (request.response) {
+    const via = request.source ? (' via ' + escapeHtml(request.source)) : '';
+    statusParts.push('Response' + via + ': ' + escapeHtml(request.response));
+  }
+  if (request.respondedAt) {
+    statusParts.push('Answered ' + escapeHtml(formatInputTimestamp(request.respondedAt)));
+  }
+  if (request.consumedAt) {
+    statusParts.push('Consumed ' + escapeHtml(formatInputTimestamp(request.consumedAt)));
+  }
+
+  if (statusParts.length > 0) {
+    html += '<div class="input-request-state">' + statusParts.join(' &middot; ') + '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function ediProdLink(jobNumber, jobUrl) {
+  const httpsLink = jobUrl || '';
+
+  // Prefer edient:Command=ShowEditForm if the HTTPS link embeds the GUID — opens directly in
+  // the CargoWise desktop app without a browser round-trip. The HTTPS URL format is:
+  //   https://ediprod.cw.wisetechglobal.com/link/ShowEditForm/{Controller}/{guid}?lang=en-gb
+  if (httpsLink) {
+    const guidMatch = httpsLink.match(/ShowEditForm\/(\w+)\/([0-9a-f-]{36})/i);
+    if (guidMatch) {
+      const controller = guidMatch[1];
+      const guid = guidMatch[2];
+      const edientLink = 'edient:Command=ShowEditForm&ControllerID=' + controller + '&BusinessEntityPK=' + guid + '&Domain=wtg.zone&Instance=ediProd';
+      return '<a href="' + escapeAttribute(edientLink) + '" title="Open in ediProd" style="color:inherit;text-decoration:underline dotted;cursor:pointer;">' + escapeHtml(jobNumber) + '</a>';
+    }
+    // Fallback to HTTPS if GUID extraction fails
+    return '<a href="' + escapeAttribute(httpsLink) + '" title="Open in ediProd" style="color:inherit;text-decoration:underline dotted;cursor:pointer;" target="_blank" rel="noopener noreferrer">' + escapeHtml(jobNumber) + '</a>';
+  }
+
+  const edientMatch = String(jobNumber || '').trim().match(/^(WI|CS|PRJ)\d{8}$/i);
+  if (!edientMatch) return escapeHtml(jobNumber);
+
+  const edientType = edientMatch[1].toUpperCase();
+  const edientLink = 'edient:Command=ShortCode&Id=' + encodeURIComponent(jobNumber) + '&Type=' + encodeURIComponent(edientType);
+  return '<a href="' + escapeAttribute(edientLink) + '" title="Open in ediProd (desktop)" style="color:inherit;text-decoration:underline dotted;cursor:pointer;">' + escapeHtml(jobNumber) + '</a>';
+}
+
+function getTaskKey(jobNumber, taskSequence) {
+  const sequence = String(taskSequence || '').trim();
+  return sequence ? (String(jobNumber || '') + '::' + sequence) : String(jobNumber || '');
+}
+
+function getTaskSelectorId(jobNumber, taskSequence) {
+  return 'task-select-' + getTaskKey(jobNumber, taskSequence).replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+function getTaskOptionValue(task) {
+  const sequence = String((task && task.taskSequence) || '');
+  const type = String((task && task.taskType) || '');
+  return sequence + '|||' + type;
+}
+
+function getSelectedStartableTask(jobNumber, taskSequence) {
+  const job = ((lastState && lastState.startableJobs) || []).find(item => getTaskKey(item.jobNumber, item.taskSequence) === getTaskKey(jobNumber, taskSequence));
+  if (!job) {
+    return null;
+  }
+
+  const tasks = Array.isArray(job.startableTasks) && job.startableTasks.length > 0
+    ? job.startableTasks
+    : [{ taskSequence: job.taskSequence || '', taskType: job.taskType || '' }];
+  const selector = document.getElementById(getTaskSelectorId(jobNumber, taskSequence));
+  if (!selector) {
+    return tasks[0] || null;
+  }
+
+  return tasks.find(task => getTaskOptionValue(task) === selector.value) || tasks[0] || null;
+}
+
+function buildTaskCommand(action, jobNumber, taskSequence) {
+  return action + ' ' + jobNumber + (taskSequence ? (' --task ' + taskSequence) : '');
+}
+
+function renderLinkedJobText(text, primaryJobNumber, primaryJobUrl) {
+  const value = String(text || '');
+  if (!value) {
+    return '';
+  }
+
+  const pattern = /\b(?:WI|CS|PRJ)\d{8}\b/g;
+  let cursor = 0;
+  let html = '';
+  let match;
+
+  while ((match = pattern.exec(value)) !== null) {
+    html += escapeHtml(value.slice(cursor, match.index));
+    const jobNumber = match[0];
+    html += ediProdLink(jobNumber, jobNumber === primaryJobNumber ? primaryJobUrl : '');
+    cursor = match.index + jobNumber.length;
+  }
+
+  html += escapeHtml(value.slice(cursor));
+  return html;
+}
+
+function renderCard(item, type) {
+  const jobNumber = item.jobNumber || '';
+  const taskSequence = item.taskSequence || '';
+  const taskKey = getTaskKey(jobNumber, taskSequence);
+  const cardId = 'card-' + taskKey.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const jobNumberJs = JSON.stringify(jobNumber);
+  const jobNumberAttr = escapeAttribute(jobNumberJs);
+  const taskSequenceAttr = escapeAttribute(JSON.stringify(taskSequence));
+  const tt = escapeHtml(item.taskType || 'unknown');
+  const jobUrl = item.jobUrl || '';
+  const summaryText = item.summary || item.title || item.description || '';
+  const summary = escapeHtml(summaryText);
+  const descText = item.description || '';
+  const desc = escapeHtml(descText);
+  const zone = item.zone || 0;
+  const sources = Array.isArray(item.sources) ? item.sources.filter(Boolean) : [];
+  const model = item.model || '';
+  const subAgents = item.subAgentCount || 0;
+  const phase = item.phase || '';
+  const error = item.error || '';
+  const finalReportSummary = item.finalReportSummary || '';
+  const userInputRequest = item.userInputRequest || null;
+  const lastUserInput = item.lastUserInput || null;
+  const batching = item.batching || null;
+  const prUrls = Array.isArray(item.prUrls) ? item.prUrls.filter(Boolean) : [];
+  const logs = Array.isArray(item.logs) ? item.logs : [];
+  const startedAt = item.startedAt || item.queuedAt || '';
+  const completedAt = item.completedAt || '';
+  const activity = getActivityInfo(item, type);
+  const isPaused = String(item.status || '').toLowerCase() === 'paused' || String(item.activityStatus || '').toLowerCase() === 'paused';
+
+  let html = '<div class="card" id="' + escapeAttribute(cardId) + '">';
+  html += '<div class="card-header">';
+  html += '<div class="job-heading">';
+  html += '<span class="job-number">' + ediProdLink(jobNumber, jobUrl) + '</span>';
+  if (jobNumber) html += '<a href="https://crikey.wtg.zone/TestRuns?query=' + encodeURIComponent(jobNumber) + '" target="_blank" rel="noopener noreferrer" title="Open in Crikey" class="crikey-btn"><img src="/crikey.svg" alt="Crikey" /></a>';
+  if (taskSequence) html += '<span class="task-pill">Task ' + escapeHtml(String(taskSequence)) + '</span>';
+  if (summaryText && summaryText !== jobNumber) html += '<span class="job-summary">' + summary + '</span>';
+  html += '</div>';
+  html += '<div>';
+  html += '<span class="badge ' + getTaskBadgeClass(tt) + '">' + tt + '</span>';
+  if (model) html += ' <span class="badge badge-' + model.toLowerCase() + '">' + escapeHtml(model) + '</span>';
+  html += '</div>';
+  html += '</div>';
+
+  if (zone) {
+    html += '<div class="card-meta"><span class="zone-indicator ' + getZoneClass(zone) + '"></span>Zone ' + zone;
+    html += '</div>';
+  }
+  if (descText && descText !== summaryText) {
+    const taskLine = taskSequence ? ('Task ' + escapeHtml(String(taskSequence)) + ' - ' + desc) : desc;
+    html += '<div class="card-desc">' + taskLine + '</div>';
+  }
+  if ((type === 'completed' || type === 'failed') && finalReportSummary) {
+    html += '<div class="report-summary"><strong>Final report:</strong> ' + escapeHtml(finalReportSummary) + '</div>';
+  }
+  if (item.cleanupBlockedReason) {
+    html += '<div class="attention-inline attention-inline-error"><strong>Cleanup blocked:</strong> ' + escapeHtml(item.cleanupBlockedReason) + '</div>';
+  }
+  if (item.isStale) {
+    html += '<div class="attention-inline attention-inline-warning"><strong>Worker may be stale:</strong> last heartbeat at ' + escapeHtml(item.lastHeartbeatAt || 'unknown') + '.</div>';
+  }
+
+  html += '<div class="card-meta">';
+  html += '<span class="activity-badge activity-' + escapeHtml(activity.key) + '">' + escapeHtml(activity.label) + '</span>';
+  if (item.activityMessage) {
+    html += '<span>' + escapeHtml(item.activityMessage) + '</span>';
+  }
+  html += '</div>';
+
+  if (sources.length > 0) {
+    html += '<div class="card-meta"><div class="source-list">';
+    sources.forEach(source => {
+      html += '<span class="source-pill">' + escapeHtml(source) + '</span>';
+    });
+    html += '</div></div>';
+  }
+
+  if (batching && (type === 'startable' || type === 'waiting')) {
+    const launchScore = Number.isFinite(Number(batching.launchScore)) ? Math.round(Number(batching.launchScore)) : 0;
+    const scoreClass = launchScore >= 40 ? 'batch-pill-score-high' : launchScore >= 25 ? 'batch-pill-score-medium' : 'batch-pill-score-low';
+    const batchReasons = Array.isArray(batching.reasons) ? batching.reasons.filter(Boolean) : [];
+    const batchRepos = Array.isArray(batching.repos) ? batching.repos.filter(Boolean) : [];
+
+    const batchTooltipParts = [];
+    batchTooltipParts.push('Launch: ' + String(launchScore));
+    if (Number.isFinite(Number(batching.completionValue))) batchTooltipParts.push('completion: ' + String(batching.completionValue));
+    if (batching.workspaceLabel) batchTooltipParts.push('workspace: ' + batching.workspaceLabel);
+    if (batching.overlapCount) batchTooltipParts.push('overlap: ' + String(batching.overlapCount));
+    if (batchReasons.length > 0) batchTooltipParts.push('reasons: ' + batchReasons.join(', '));
+    if (batchRepos.length > 0) batchTooltipParts.push('repos: ' + batchRepos.join(', '));
+    const batchTooltip = escapeAttribute(batchTooltipParts.join(' | '));
+
+    html += '<div class="card-meta"><div class="batch-list" title="' + batchTooltip + '">';
+    html += '<span class="batch-pill ' + scoreClass + '">Launch ' + escapeHtml(String(launchScore)) + '</span>';
+    if (batching.repoGroup) html += '<span class="batch-pill">' + escapeHtml(batching.repoGroup) + '</span>';
+    if (batching.overlapCount) html += '<span class="batch-pill">' + escapeHtml(String(batching.overlapCount)) + ' overlap</span>';
+    if (batching.workspaceLabel) html += '<span class="batch-pill">' + escapeHtml(batching.workspaceLabel) + '</span>';
+    html += '</div></div>';
+
+    if (batchReasons.length > 0 || batchRepos.length > 0) {
+      const batchSegments = [];
+      if (batchReasons.length > 0) batchSegments.push(batchReasons.join(' · '));
+      if (batchRepos.length > 0) {
+        // Show a concise repo list: prefer up to 3 relevant repos to avoid very long lists
+        const displayRepos = batchRepos.slice(0, 3);
+        const more = batchRepos.length > displayRepos.length ? '...' : '';
+        batchSegments.push('repos: ' + displayRepos.join(', ') + more);
+      }
+      html += '<div class="batch-line"><strong>Batch hint:</strong> ' + escapeHtml(batchSegments.join(' | ')) + '</div>';
+    }
+  }
+
+  if (type === 'startable' && item.neverAutoStart) {
+    html += '<div class="attention-inline attention-inline-warning"><strong>Auto start disabled:</strong> Ratatosk will not launch this item automatically.</div>';
+  }
+
+  if (type === 'startable' && Array.isArray(item.startableTasks) && item.startableTasks.length > 1) {
+    const selectorId = getTaskSelectorId(jobNumber, taskSequence);
+    html += '<div class="task-selector"><label>Target task<select id="' + escapeAttribute(selectorId) + '">';
+    item.startableTasks.forEach(task => {
+      const selected = String(task.taskSequence || '') === String(item.taskSequence || '') && String(task.taskType || '') === String(item.taskType || '');
+      const sequenceLabel = task.taskSequence ? ('Task ' + escapeHtml(String(task.taskSequence))) : 'Task';
+      const typeLabel = task.taskType ? (' - ' + escapeHtml(String(task.taskType))) : '';
+      html += '<option value="' + escapeAttribute(getTaskOptionValue(task)) + '"' + (selected ? ' selected' : '') + '>' + sequenceLabel + typeLabel + '</option>';
+    });
+    html += '</select></label></div>';
+  }
+
+  if (type === 'running' && phase) {
+    const pct = getPhasePercent(phase);
+    html += '<div class="phase-label">' + escapeHtml(phase) + '</div>';
+    html += '<div class="phase-bar"><div class="phase-bar-fill" style="width:' + pct + '%"></div></div>';
+  }
+
+  html += '<div class="card-meta">';
+  if (type === 'running' || type === 'completed') {
+    html += '<span>' + formatDuration(startedAt, completedAt) + '</span>';
+  }
+  if (subAgents > 0) {
+    html += '<span class="sub-agents">&#x2442; ' + subAgents + ' sub-agents</span>';
+  }
+  html += '</div>';
+
+  if (userInputRequest && userInputRequest.question && userInputRequest.state !== 'consumed') {
+    html += renderUserInputBlock(userInputRequest, 'User input needed');
+  } else if (lastUserInput && lastUserInput.question && (type === 'running' || type === 'completed' || type === 'failed')) {
+    html += renderUserInputBlock(lastUserInput, 'Latest resolved input');
+  }
+
+  if (prUrls.length > 0 && type === 'completed') {
+    html += '<div class="card-links">';
+    prUrls.forEach((prUrl, index) => {
+      const prNumMatch = String(prUrl).match(/\/pull\/(\d+)/);
+      const prLabel = prNumMatch ? 'PR #' + prNumMatch[1] : ('PR ' + (index + 1));
+      html += '<a class="pr-link" href="' + escapeHtml(prUrl) + '" target="_blank" rel="noopener noreferrer">&#x1F517; ' + prLabel + '</a>';
+    });
+    html += '</div>';
+  }
+
+  if (error && type === 'failed') {
+    html += '<div class="error-msg">' + escapeHtml(error) + '</div>';
+  }
+
+  html += '<div class="card-actions">';
+  if (type === 'startable') {
+    html += '<button class="btn btn-green" onclick=\'queueStartableJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Queue</button>';
+    html += '<button class="btn btn-blue" onclick=\'startStartableJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Start Now</button>';
+    html += '<button class="btn btn-teal" onclick=\'openInstructModal(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Notes</button>';
+    html += '<button class="btn ' + (item.neverAutoStart ? 'btn-purple' : 'btn-orange') + '" onclick=\'toggleNeverAutoStart(' + jobNumberAttr + ',' + taskSequenceAttr + ',' + escapeAttribute(JSON.stringify(Boolean(item.neverAutoStart))) + ')\'>' + (item.neverAutoStart ? 'Allow Auto' : 'Never Auto') + '</button>';
+  } else if (type === 'waiting') {
+    html += '<button class="btn btn-green" onclick=\'startJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Start</button>';
+    html += '<button class="btn btn-teal" onclick=\'openInstructModal(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Notes</button>';
+    // Remove button: dequeues the waiting card immediately without confirmation.
+    // The startable poller will re-add the job if it becomes startable again.
+    html += '<button class="btn btn-gray" onclick=\'removeFromQueue(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Remove</button>';
+  } else if (type === 'running') {
+    if (isPaused) {
+      html += '<button class="btn btn-green" onclick=\'resumeJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Resume</button>';
+    }
+    html += '<button class="btn btn-blue" onclick=\'jumpToTab(' + jobNumberAttr + ')\'>Jump to Tab</button>';
+    if (userInputRequest && userInputRequest.state === 'pending') {
+      html += '<button class="btn btn-orange" onclick=\'replyToJob(' + jobNumberAttr + ',' + taskSequenceAttr + ',' + escapeAttribute(JSON.stringify(userInputRequest.requestId || '')) + ')\'>Provide Input</button>';
+    }
+    // Complete button: intentionally kept — manually moves this running card to the Completed
+    // column without stopping the process. Useful when a worker finishes silently or the
+    // developer wants to mark the job done before the worker updates state automatically.
+    html += '<button class="btn btn-green" onclick=\'manualCompleteJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Complete</button>';
+  } else if (type === 'completed') {
+    html += '<button class="btn btn-gray" onclick=\'cleanupJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Cleanup</button>';
+  } else if (type === 'failed') {
+    html += '<button class="btn btn-orange" onclick=\'retryJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Retry</button>';
+    html += '<button class="btn btn-gray" onclick=\'cleanupJob(' + jobNumberAttr + ',' + taskSequenceAttr + ')\'>Cleanup</button>';
+  }
+  html += '</div>';
+
+  if (logs.length > 0) {
+    const logId = 'log-' + taskKey.replace(/[^a-zA-Z0-9]/g, '');
+    html += '<div class="log-toggle" onclick=\'toggleLog(' + escapeAttribute(JSON.stringify(logId)) + ')\'>&#9660; Logs (' + logs.length + ')</div>';
+    html += '<div class="log-viewer" id="' + logId + '">';
+    logs.forEach(l => { html += '<div>' + escapeHtml(l) + '</div>'; });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function toggleLog(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+function detectChanges(oldState, newState) {
+  if (!oldState || !notificationsEnabled) return;
+  const oldCompleted = new Set((oldState.completedJobs || []).map(j => getTaskKey(j.jobNumber, j.taskSequence)));
+  const oldFailed = new Set((oldState.failedJobs || []).map(j => getTaskKey(j.jobNumber, j.taskSequence)));
+
+  (newState.completedJobs || []).forEach(j => {
+    const taskKey = getTaskKey(j.jobNumber, j.taskSequence);
+    if (!oldCompleted.has(taskKey)) {
+      new Notification('Ratatosk: Job Completed', { body: j.jobNumber + (j.taskSequence ? (' task ' + j.taskSequence) : '') + ' finished successfully' });
+    }
+  });
+  (newState.failedJobs || []).forEach(j => {
+    const taskKey = getTaskKey(j.jobNumber, j.taskSequence);
+    if (!oldFailed.has(taskKey)) {
+      new Notification('Ratatosk: Job Failed', { body: j.jobNumber + (j.taskSequence ? (' task ' + j.taskSequence) : '') + ' encountered an error' });
+    }
+  });
+}
+
+function renderStartableBody(startableJobs, status) {
+  let html = '';
+  const allStartableJobs = Array.isArray(startableJobs) ? startableJobs : [];
+  const visibleStartableJobs = getVisibleStartableJobs(allStartableJobs);
+  const warnings = Array.isArray(status && status.warnings) ? status.warnings.filter(Boolean) : [];
+  const autonomy = (status && status.autonomy) || null;
+  const neverAutoStartCount = Number((status && status.neverAutoStartCount) || 0);
+  const hiddenNeverAutoCount = allStartableJobs.length - visibleStartableJobs.length;
+
+  if (status && status.lastError) {
+    html += '<div class="column-note">Startable poll error: ' + escapeHtml(status.lastError) + '</div>';
+  } else if (warnings.length > 0) {
+    html += '<div class="column-note">' + escapeHtml(warnings.join(' | ')) + '</div>';
+  } else if (status && status.lastPolledAt) {
+    html += '<div class="column-note">Last polled: ' + escapeHtml(new Date(status.lastPolledAt).toLocaleTimeString()) + '</div>';
+  }
+
+  if (autonomy && autonomy.mode && autonomy.mode !== 'suggestions-only') {
+    html += '<div class="column-note">Autonomy: ' + escapeHtml(autonomy.mode) + ' &middot; ' + escapeHtml(autonomy.state || 'idle');
+    if (autonomy.detail) {
+      html += ' &middot; ' + escapeHtml(autonomy.detail);
+    }
+    html += '</div>';
+  }
+
+  if (neverAutoStartCount > 0) {
+    html += '<div class="column-note">' + escapeHtml(String(neverAutoStartCount)) + ' startable task(s) are marked never auto start.</div>';
+  }
+
+  if (hideNeverAutoStartable && hiddenNeverAutoCount > 0) {
+    html += '<div class="column-note">Hiding ' + escapeHtml(String(hiddenNeverAutoCount)) + ' never-auto task(s). Click <strong>Show Never Auto</strong> to reveal them.</div>';
+  }
+
+  html += visibleStartableJobs.map(job => renderCard(job, 'startable')).join('');
+  return html;
+}
+
+async function revivePoller(name) {
+  try {
+    const res = await fetch('/api/pollers/revive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poller: name })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || data.message || ('Failed to revive ' + name));
+    }
+    showToast(data.message || ('Revived ' + name + ' poller'), 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function restartServer() {
+  if (!confirm('Restart the dashboard server? (Requires PM2 — the page will reconnect automatically.)')) return;
+  try {
+    const res = await fetch('/api/restart', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    showToast(data.message || 'Restart triggered — reconnecting…', 'info');
+    // Poll until the server is back up
+    setTimeout(async function poll() {
+      try {
+        await fetch('/api/state', { method: 'GET' });
+        showToast('Dashboard restarted successfully.', 'success');
+        refreshState();
+      } catch {
+        setTimeout(poll, 1500);
+      }
+    }, 1500);
+  } catch (e) {
+    showToast('Restart failed: ' + e.message, 'error');
+  }
+}
+
+async function refreshState() {
+  try {
+    const headers = {};
+    if (lastEtag) headers['If-None-Match'] = lastEtag;
+    const res = await fetch('/api/state', { headers });
+    if (res.status === 304) return;
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const state = await res.json();
+    lastEtag = res.headers.get('etag') || null;
+
+    document.getElementById('statusDot').className = 'status-dot connected';
+    document.getElementById('statusText').textContent = 'Connected';
+
+    detectChanges(lastState, state);
+    lastState = state;
+    const commandInputState = captureCommandInputState();
+    setColumnIfChanged('pollerBar', renderTopBar(state.pollers || {}, state.attentionItems || [], state.healthChecks || {}));
+    restoreCommandInputState(commandInputState);
+    updateStartableFilterButton();
+
+    const startable = state.startableJobs || [];
+    const visibleStartable = getVisibleStartableJobs(startable);
+    const waiting = state.waitingQueue || [];
+    const workers = state.workers || [];
+    const completed = state.completedJobs || [];
+    const failed = state.failedJobs || [];
+
+    document.getElementById('startableCount').textContent = visibleStartable.length;
+    document.getElementById('waitingCount').textContent = waiting.length;
+    document.getElementById('runningCount').textContent = workers.length;
+    document.getElementById('completedCount').textContent = completed.length;
+    document.getElementById('failedCount').textContent = failed.length;
+
+    setColumnIfChanged('startableCol', renderStartableBody(startable, state.startableJobsStatus || {}));
+    setColumnIfChanged('waitingCol', waiting.map(w => renderCard(w, 'waiting')).join(''));
+    setColumnIfChanged('runningCol', workers.map(w => renderCard(w, 'running')).join(''));
+    setColumnIfChanged('completedCol', completed.map(w => renderCard(w, 'completed')).join(''));
+    setColumnIfChanged('failedCol', failed.map(w => renderCard(w, 'failed')).join(''));
+
+  } catch (e) {
+    document.getElementById('statusDot').className = 'status-dot disconnected';
+    document.getElementById('statusText').textContent = 'Disconnected';
+  }
+}
+
+function focusJob(jobNumber, taskSequence) {
+  if (!jobNumber) return;
+  const cardId = 'card-' + getTaskKey(jobNumber, taskSequence).replace(/[^a-zA-Z0-9_-]/g, '-');
+  const card = document.getElementById(cardId);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+async function executeCommand() {
+  const input = document.getElementById('cmdInput');
+  const cmd = input.value.trim();
+  if (!cmd) return;
+
+  try {
+    const res = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: cmd, source: 'dashboard-command', responder: 'dashboard' })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || data.message || 'Command failed');
+    }
+
+    showToast(data.message || 'Command executed', data.requiresRatatoskStart ? 'info' : 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+
+  input.value = '';
+  commandDraft = '';
+}
+
+async function submitInput(jobNumber, taskSequence, response, requestId) {
+  const res = await fetch('/api/submit-input', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobNumber, taskSequence, response, requestId, source: 'dashboard', responder: 'dashboard' })
+  });
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to submit input');
+  }
+  return data;
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const target = e.target;
+  if (!target || target.id !== 'cmdInput') return;
+  executeCommand();
+});
+
+document.addEventListener('input', (e) => {
+  const target = e.target;
+  if (!target || target.id !== 'cmdInput') return;
+  commandDraft = target.value;
+});
+
+async function jumpToTab(jobNumber) {
+  try {
+    const res = await fetch('/api/jump', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobNumber })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Jumping to ' + jobNumber, 'success');
+    } else {
+      showToast('Jump failed: ' + (data.error || 'unknown'), 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function cleanupJob(jobNumber, taskSequence) {
+  const label = jobNumber + (taskSequence ? (' task ' + taskSequence) : '');
+  if (!confirm('Cleanup ' + label + '? This removes the selected task record. Ratatosk will only delete the shared workspace if no other tasks from the same WI remain.')) return;
+  try {
+    const cleanupUrl = '/api/cleanup/' + encodeURIComponent(jobNumber) + (taskSequence ? ('?taskSequence=' + encodeURIComponent(taskSequence)) : '');
+    const res = await fetch(cleanupUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Cleaned up ' + label, 'success');
+      refreshState();
+    } else {
+      showToast('Cleanup failed: ' + (data.error || 'unknown'), 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// removeFromQueue: removes a waiting-queue card immediately without confirmation.
+// The startable-jobs poller will re-add the job automatically if it becomes startable again.
+async function removeFromQueue(jobNumber, taskSequence) {
+  const label = jobNumber + (taskSequence ? (' task ' + taskSequence) : '');
+  try {
+    const url = '/api/cleanup/' + encodeURIComponent(jobNumber) + (taskSequence ? ('?taskSequence=' + encodeURIComponent(taskSequence)) : '');
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Removed ' + label + ' from queue', 'success');
+      refreshState();
+    } else {
+      showToast('Remove failed: ' + (data.error || 'unknown'), 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// manualCompleteJob: intentionally kept — moves the running card to Completed without stopping
+// the underlying process. Called by the Complete button on running cards.
+async function manualCompleteJob(jobNumber, taskSequence) {
+  const label = jobNumber + (taskSequence ? (' task ' + taskSequence) : '');
+  try {
+    const url = '/api/complete/' + encodeURIComponent(jobNumber) + (taskSequence ? ('?taskSequence=' + encodeURIComponent(taskSequence)) : '');
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Marked ' + label + ' as complete', 'success');
+      refreshState();
+    } else {
+      showToast('Complete failed: ' + (data.error || 'unknown'), 'error');
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function queueStartableJob(jobNumber, taskSequence) {
+  const job = ((lastState && lastState.startableJobs) || []).find(item => getTaskKey(item.jobNumber, item.taskSequence) === getTaskKey(jobNumber, taskSequence));
+  const selectedTask = getSelectedStartableTask(jobNumber, taskSequence);
+  if (!job) {
+    showToast('Could not find ' + jobNumber + ' in the current startable list', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobNumber: job.jobNumber,
+        jobGuid: job.jobGuid || '',
+        taskSequence: (selectedTask && selectedTask.taskSequence) || job.taskSequence || '',
+        taskType: (selectedTask && selectedTask.taskType) || job.taskType || '',
+        summary: job.summary || '',
+        description: job.description || '',
+        zone: job.zone || 0,
+        source: job.source || 'dashboard-startable',
+        sources: Array.isArray(job.sources) ? job.sources : [],
+        repoGroup: job.repoGroup || (job.batching && job.batching.repoGroup) || '',
+        repos: Array.isArray(job.repos) && job.repos.length > 0 ? job.repos : (job.batching && Array.isArray(job.batching.repos) ? job.batching.repos : []),
+        batchSelectionMode: job.batchSelectionMode || (job.batching && job.batching.selectionMode) || '',
+        batchSelectionReason: job.batchSelectionReason || (job.batching && job.batching.selectionReason) || '',
+        queuedVia: 'dashboard-startable'
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || ('Failed to queue ' + jobNumber));
+    }
+    showToast('Queued ' + jobNumber, 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function startJob(jobNumber, taskSequence) {
+  try {
+    const res = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: buildTaskCommand('start', jobNumber, taskSequence), source: 'dashboard-command', responder: 'dashboard' })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || data.message || ('Failed to start ' + jobNumber));
+    }
+    showToast(data.message || ('Queued ' + jobNumber), data.requiresRatatoskStart ? 'info' : 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function startStartableJob(jobNumber, taskSequence) {
+  const job = ((lastState && lastState.startableJobs) || []).find(item => getTaskKey(item.jobNumber, item.taskSequence) === getTaskKey(jobNumber, taskSequence));
+  const selectedTask = getSelectedStartableTask(jobNumber, taskSequence);
+  if (!job) {
+    showToast('Could not find ' + jobNumber + ' in the current startable list', 'error');
+    return;
+  }
+
+  try {
+    const queueRes = await fetch('/api/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobNumber: job.jobNumber,
+        jobGuid: job.jobGuid || '',
+        taskSequence: (selectedTask && selectedTask.taskSequence) || job.taskSequence || '',
+        taskType: (selectedTask && selectedTask.taskType) || job.taskType || '',
+        summary: job.summary || '',
+        description: job.description || '',
+        zone: job.zone || 0,
+        source: job.source || 'dashboard-force-start',
+        sources: Array.isArray(job.sources) ? job.sources : [],
+        repoGroup: job.repoGroup || (job.batching && job.batching.repoGroup) || '',
+        repos: Array.isArray(job.repos) && job.repos.length > 0 ? job.repos : (job.batching && Array.isArray(job.batching.repos) ? job.batching.repos : []),
+        batchSelectionMode: job.batchSelectionMode || (job.batching && job.batching.selectionMode) || '',
+        batchSelectionReason: job.batchSelectionReason || (job.batching && job.batching.selectionReason) || '',
+        queuedVia: 'dashboard-force-start'
+      })
+    });
+    const queueData = await queueRes.json();
+    if (!queueRes.ok && (!queueData.error || !String(queueData.error).includes('already queued'))) {
+      throw new Error(queueData.error || ('Failed to queue ' + jobNumber + ' for immediate start'));
+    }
+
+    const startRes = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: buildTaskCommand('start', jobNumber, (selectedTask && selectedTask.taskSequence) || taskSequence), source: 'dashboard-force-start', responder: 'dashboard' })
+    });
+    const startData = await startRes.json();
+    if (!startData.success) {
+      throw new Error(startData.error || startData.message || ('Failed to start ' + jobNumber));
+    }
+
+    showToast(startData.message || ('Started ' + jobNumber), 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function updateAutonomyConfigFromCard() {
+  const modeElement = document.getElementById('autonomyModeSelect');
+  const workersElement = document.getElementById('autonomyMaxWorkersInput');
+  if (!modeElement || !workersElement) return;
+
+  try {
+    const res = await fetch('/api/autonomy-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: modeElement.value,
+        maxConcurrentWorkers: Number(workersElement.value)
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to update autonomy settings');
+    }
+    showToast('Updated autonomy settings', 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function toggleNeverAutoStart(jobNumber, taskSequence, currentValue) {
+  try {
+    const res = await fetch('/api/startable-preference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobNumber,
+        taskSequence,
+        neverAutoStart: !currentValue
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to update auto-start preference');
+    }
+    showToast((!currentValue ? 'Disabled' : 'Enabled') + ' auto start for ' + jobNumber + (taskSequence ? (' task ' + taskSequence) : ''), 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function retryJob(jobNumber, taskSequence) {
+  try {
+    const res = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: buildTaskCommand('retry', jobNumber, taskSequence), source: 'dashboard-command', responder: 'dashboard' })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || data.message || ('Failed to retry ' + jobNumber));
+    }
+    showToast(data.message || ('Re-queued ' + jobNumber), data.requiresRatatoskStart ? 'info' : 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function resumeJob(jobNumber, taskSequence) {
+  try {
+    const res = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: buildTaskCommand('resume', jobNumber, taskSequence), source: 'dashboard-resume', responder: 'dashboard' })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || data.message || ('Failed to resume ' + jobNumber));
+    }
+    showToast(data.message || ('Resumed ' + jobNumber), 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function replyToJob(jobNumber, taskSequence, requestId) {
+  const label = jobNumber + (taskSequence ? (' task ' + taskSequence) : '');
+  const message = window.prompt('Reply for ' + label + ':');
+  if (!message || !message.trim()) return;
+  try {
+    await submitInput(jobNumber, taskSequence, message.trim(), requestId);
+    showToast('Reply sent for ' + label, 'success');
+    refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// Instruct modal state
+let instructJobNumber = '';
+let instructTaskSequence = '';
+
+async function openInstructModal(jobNumber, taskSequence) {
+  instructJobNumber = jobNumber;
+  instructTaskSequence = taskSequence;
+
+  const overlay = document.getElementById('instructOverlay');
+  const title = document.getElementById('instructModalTitle');
+  const loading = document.getElementById('instructLoadingMsg');
+  const error = document.getElementById('instructErrorMsg');
+  const editorWrap = document.getElementById('instructEditorWrap');
+  const textarea = document.getElementById('instructTextarea');
+  const saveBtn = document.getElementById('instructSaveBtn');
+
+  const label = jobNumber + (taskSequence ? (' — task ' + taskSequence) : '');
+  title.textContent = 'Task Notes — ' + label;
+  loading.style.display = 'block';
+  error.style.display = 'none';
+  editorWrap.style.display = 'none';
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Save';
+  textarea.value = '';
+  overlay.style.display = 'block';
+
+  try {
+    const params = new URLSearchParams({ jobNumber, taskSequence });
+    const res = await fetch('/api/notes?' + params.toString());
+    const data = await res.json();
+    loading.style.display = 'none';
+    if (!data.success) {
+      error.textContent = data.error || 'Failed to load notes.';
+      error.style.display = 'block';
+      return;
+    }
+    textarea.value = data.notes || '';
+    editorWrap.style.display = 'flex';
+    editorWrap.style.flexDirection = 'column';
+    saveBtn.disabled = false;
+    textarea.focus();
+  } catch (e) {
+    loading.style.display = 'none';
+    error.textContent = 'Error: ' + e.message;
+    error.style.display = 'block';
+  }
+}
+
+function closeInstructModal() {
+  document.getElementById('instructOverlay').style.display = 'none';
+  instructJobNumber = '';
+  instructTaskSequence = '';
+  // Reset save button so it's ready for the next open
+  const saveBtn = document.getElementById('instructSaveBtn');
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save';
+}
+
+async function saveInstructions() {
+  const saveBtn = document.getElementById('instructSaveBtn');
+  const textarea = document.getElementById('instructTextarea');
+  const error = document.getElementById('instructErrorMsg');
+  const content = textarea.value;
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+  error.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobNumber: instructJobNumber, taskSequence: instructTaskSequence, content }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      error.textContent = data.error || 'Failed to save notes.';
+      error.style.display = 'block';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+      return;
+    }
+    showToast('Notes saved for ' + instructJobNumber + (instructTaskSequence ? ' task ' + instructTaskSequence : ''), 'success');
+    closeInstructModal();
+  } catch (e) {
+    error.textContent = 'Error: ' + e.message;
+    error.style.display = 'block';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+  }
+}
+
+// Initial load and auto-refresh
+refreshState();
+setInterval(refreshState, 5000);
+</script>
+</body>
+</html>

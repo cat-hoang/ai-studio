@@ -1,0 +1,39 @@
+{
+  "description": "Ratatosk Claude worker hooks",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "ediProd-tasks-action",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File \"${CLAUDE_PLUGIN_ROOT}\\hooks\\guard-mcp-ediprod-task.ps1\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File \"${CLAUDE_PLUGIN_ROOT}\\hooks\\guard-bash-edi-task.ps1\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File \"${CLAUDE_PLUGIN_ROOT}\\hooks\\ensure-worker-report.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+# Ratatosk per-machine configuration
+# Copy this to config.local.yaml and fill in your values.
+# config.local.yaml is gitignored.
+
+worker_cli: "auto"                             # Worker launcher: auto, claude, or copilot
+workspace_root: ""                             # Absolute path to your workspaces directory (e.g. C:\dev\ratatosk\workspaces)
+artifacts_cache: ""                            # Absolute path to build artifact cache directory
+
+# ---------------------------------------------------------------------------
+# Issue source adapter — pick ONE and fill in its section
+# Set adapter to: github-issues | linear | jira | file
+# Leave blank to use the legacy ediProd/PAVE path (WTG users only)
+# ---------------------------------------------------------------------------
+issue_source:
+  adapter: ""
+
+  # --- GitHub Issues ---
+  # github_issues:
+  #   repo: your-org/your-repo
+  #   labels: ready-for-dev
+  #   assignee: me
+  #   token_env: GITHUB_TOKEN
+
+  # --- Linear ---
+  # linear:
+  #   team_key: ENG
+  #   state: Todo
+  #   api_key_env: LINEAR_API_KEY
+
+  # --- Jira ---
+  # jira:
+  #   base_url: https://yourorg.atlassian.net
+  #   project_key: ENG
+  #   status: "To Do"
+  #   token_env: JIRA_TOKEN
+  #   email_env: JIRA_EMAIL
+
+  # --- File (offline / testing) ---
+  # file:
+  #   path: issues.json
+
+# ---------------------------------------------------------------------------
+# Generic repo groups (studio mode — leave empty for legacy WTG mode)
+# ---------------------------------------------------------------------------
+# repo_groups:
+#   backend:
+#     - my-api
+#   frontend:
+#     - my-web-app
+
+# build:
+#   commands:
+#     my-api: "dotnet build"
+#   test_commands:
+#     my-api: "dotnet test"
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+teams_chat_enabled: false                      # Enable direct Teams chat notifications
+teams_chat_email: ""                           # Optional email hint for Teams cached auth
+teams_chat_target_mode: "self"                 # self, person, chat, or conversation-id
+teams_chat_target: ""                          # Required for person, chat, or conversation-id
+teams_chat_command_polling_enabled: false
+teams_chat_command_send_replies: true
+teams_chat_command_prefix: "ratatosk:"
+teams_chat_polling_interval_ms: 30000
+smtp_server: "smtp.office365.com"
+smtp_from: ""
+smtp_to: ""
+email_polling_interval_ms: 30000
+email_poll_folder_path: "Inbox"
+email_command_intake_enabled: false
+email_command_send_replies: true
+email_command_subject_prefix: "Ratatosk Command"
+email_command_allowed_senders: ""
+
+# ---------------------------------------------------------------------------
+# Legacy WTG / ediProd settings (only needed when adapter is blank or ediprod)
+# ---------------------------------------------------------------------------
+# staff_code: ""
+# board_name: "Your Buffer Board"
+# git_source_root: "C:\BS\Git\GitHub\WiseTechGlobal"
+# ntlm_credentials_path: "~/.etc"
+# startable_jobs_fallback_mode: "disabled"
+# startable_jobs_fallback_on_empty: false
+# staff_capabilities: []
+# domain_plugins:
+#   - name: "Rating.AI"
+#     path: "C:\\BS\\Git\\GitHub\\WiseTechGlobal\\Rating.AI"
+#     modules: ["RAT", "CLR", "COS", "RSL", "ICT", "SOQ", "RAD", "SAL", "CCC", "NQP", "RPI", "RS"]
+#     inv_command: "commands\\investigate-incident.prompt.md"
+

@@ -1,0 +1,9 @@
+{
+  "name": "ratatosk",
+  "version": "1.0.0",
+  "description": "Ratatosk task orchestrator — shared Claude and Copilot orchestration core",
+  "author": {
+    "name": "Hoai Tran"
+  },
+  "skills": "skills/"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "ratatosk",
+  "version": "1.0.0",
+  "description": "Ratatosk task orchestrator — autonomous multi-agent work item processor",
+  "author": { "name": "Hoai Tran" }
+}

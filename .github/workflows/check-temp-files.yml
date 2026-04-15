@@ -1,0 +1,17 @@
+name: Check ephemeral files
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check-temp:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run ephemeral files check
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -NonInteractive -File tools\check-ephemeral-files.ps1

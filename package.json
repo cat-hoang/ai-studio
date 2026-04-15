@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "teams-api": "^1.2.3"
+  }
+}
