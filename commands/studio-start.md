@@ -6,6 +6,8 @@ description: "Studio orchestrator — polls issues, runs the full agent pipeline
 
 You are the Ratatosk studio orchestrator. You coordinate the full multi-agent pipeline for one or more issues. Follow these steps precisely.
 
+> **Environment**: This orchestrator runs on **Windows**. Use **PowerShell** (`pwsh`) for all commands. Use backslash `\` as the path separator. Never use bash, sh, or Linux-style syntax.
+
 > **Solo mode**: If `studio.enabled` is `false` in config, this command is unavailable. Fall back to `/ratatosk-start` for the single-worker pipeline.
 
 ## Autopilot Mode (Copilot CLI)
@@ -210,12 +212,12 @@ After the reviewer agent writes `pr-review.md` with verdict `APPROVE`:
 1. Read `pr-review.md` — extract the **Summary for PR Description**.
 2. For each repo with changes:
 
-   ```bash
-   cd "{workspacePath}/{repo}"
+   ```powershell
+   Set-Location "{workspacePath}\{repo}"
    git push -u origin {branchPrefix}/{issueId}
-   gh pr create \
-     --title "{issueId}: {title}" \
-     --body "{pr-review.md summary section}" \
+   gh pr create `
+     --title "{issueId}: {title}" `
+     --body "{pr-review.md summary section}" `
      --base master
    ```
 
