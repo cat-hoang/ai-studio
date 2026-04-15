@@ -147,12 +147,11 @@ function ghIssueToIssue(i: GHIssue, staffId: string): Issue {
   const desc = (i.body ?? i.title ?? '').slice(0, 500);
 
   return {
-    jobNumber: `GH-${i.number}`,
+    issueId: `GH-${i.number}`,
     jobGuid: String(i.id),
-    taskSequence: '',
     taskType,
     assignee: i.assignee?.login ?? staffId,
-    startableTasks: [{ taskSequence: '', taskType, taskDescription: i.title }],
+    startableTasks: [{ taskType, taskDescription: i.title }],
     summary: i.title ?? '',
     description: desc,
     zone: inferZone(labelNames),

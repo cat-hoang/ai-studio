@@ -206,12 +206,11 @@ function jiraIssueToIssue(i: JiraIssue, baseUrl: string, staffId: string): Issue
   const desc = extractText(f.description)?.slice(0, 500) ?? f.summary;
 
   return {
-    jobNumber: i.key,
+    issueId: i.key,
     jobGuid: i.id,
-    taskSequence: '',
     taskType,
     assignee: f.assignee?.emailAddress ?? staffId,
-    startableTasks: [{ taskSequence: '', taskType, taskDescription: f.summary }],
+    startableTasks: [{ taskType, taskDescription: f.summary }],
     summary: f.summary,
     description: desc,
     zone: priorityToZone(f.priority?.name ?? ''),

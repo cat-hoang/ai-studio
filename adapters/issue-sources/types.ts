@@ -8,7 +8,7 @@
 
 /** A sub-task belonging to a parent issue. */
 export interface StartableTask {
-  taskSequence: string;
+  taskSequence?: string;
   taskType: string;
   taskDescription?: string;
   taskZone?: number | null;
@@ -20,12 +20,12 @@ export interface StartableTask {
  * that callers require no changes when switching adapters.
  */
 export interface Issue {
-  /** Human-readable identifier (e.g. "GH-123", "LIN-456", "WI01234567") */
-  jobNumber: string;
+  /** Human-readable identifier (e.g. "GH-123", "LIN-456", "PROJ-456") */
+  issueId: string;
   /** System-internal ID / GUID */
   jobGuid: string;
-  /** Primary task sequence number; empty string for non-task-based systems */
-  taskSequence: string;
+  /** Task sequence number (WTG legacy; optional for non-task-based systems) */
+  taskSequence?: string;
   /** Issue type: feature | bugfix | investigation | refactor | test | … */
   taskType: string;
   /** Username of the assignee */

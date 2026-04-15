@@ -9,7 +9,7 @@ artifacts_cache: ""                            # Absolute path to build artifact
 # ---------------------------------------------------------------------------
 # Issue source adapter — pick ONE and fill in its section
 # Set adapter to: github-issues | linear | jira | file
-# Leave blank to use the legacy ediProd/PAVE path (WTG users only)
+# Leave blank to fall back to file-based issues
 # ---------------------------------------------------------------------------
 issue_source:
   adapter: ""
@@ -76,18 +76,9 @@ email_command_subject_prefix: "Ratatosk Command"
 email_command_allowed_senders: ""
 
 # ---------------------------------------------------------------------------
-# Legacy WTG / ediProd settings (only needed when adapter is blank or ediprod)
+# Source root (optional — for reference-mode workspaces)
 # ---------------------------------------------------------------------------
-# staff_code: ""
-# board_name: "Your Buffer Board"
-# git_source_root: "C:\BS\Git\GitHub\WiseTechGlobal"
-# ntlm_credentials_path: "~/.etc"
-# startable_jobs_fallback_mode: "disabled"
-# startable_jobs_fallback_on_empty: false
-# staff_capabilities: []
-# domain_plugins:
-#   - name: "Rating.AI"
-#     path: "C:\\BS\\Git\\GitHub\\WiseTechGlobal\\Rating.AI"
+# git_source_root: "C:\dev\repos"   # shared local mirrors used in reference mode
 #     modules: ["RAT", "CLR", "COS", "RSL", "ICT", "SOQ", "RAD", "SAL", "CCC", "NQP", "RPI", "RS"]
 #     inv_command: "commands\\investigate-incident.prompt.md"
 

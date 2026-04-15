@@ -64,7 +64,7 @@ Wait for user input.
 
 ## Step 5: Handle User Action
 
-- **If user enters a job number**: Attempt to focus the Windows Terminal tab for that worker. Use `wt.exe -w 0 focus-tab` and try to find the tab by title matching (the tab title was set to "{jobNumber} {taskType}" when spawned). If the tab cannot be found, report "Could not find terminal tab for {jobNumber}."
+- **If user enters an issue ID**: Attempt to focus the Windows Terminal tab for that worker. Use `wt.exe -w 0 focus-tab` and try to find the tab by title matching (the tab title was set to "{issueId} {taskType}" when spawned). If the tab cannot be found, report "Could not find terminal tab for {issueId}."
 
 - **If user enters 'dash'**: Open the dashboard in the default browser:
   ```

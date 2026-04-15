@@ -184,12 +184,11 @@ function linearIssueToIssue(n: LinearIssue, staffId: string): Issue {
   const taskType = inferTaskType(n.title, labelNames);
 
   return {
-    jobNumber: n.identifier,
+    issueId: n.identifier,
     jobGuid: n.id,
-    taskSequence: '',
     taskType,
     assignee: n.assignee?.email ?? staffId,
-    startableTasks: [{ taskSequence: '', taskType, taskDescription: n.title }],
+    startableTasks: [{ taskType, taskDescription: n.title }],
     summary: n.title,
     description: (n.description ?? n.title).slice(0, 500),
     zone: priorityToZone(n.priority),

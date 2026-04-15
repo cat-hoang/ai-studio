@@ -99,9 +99,6 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
 .job-heading { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
 .job-number { font-size: 16px; font-weight: 700; font-family: "Consolas", monospace; }
-.crikey-btn { display: inline-flex; align-items: center; align-self: center; margin-left: 2px; opacity: 0.7; transition: opacity 0.15s; flex-shrink: 0; }
-.crikey-btn:hover { opacity: 1; }
-.crikey-btn img { width: 16px; height: 16px; display: block; }
 .task-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(108, 92, 231, 0.18); color: #d9ccff; }
 .job-summary { font-size: 14px; font-weight: 600; line-height: 1.4; }
 .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
@@ -895,30 +892,12 @@ function renderUserInputBlock(request, titleText) {
   return html;
 }
 
-function ediProdLink(jobNumber, jobUrl) {
-  const httpsLink = jobUrl || '';
-
-  // Prefer edient:Command=ShowEditForm if the HTTPS link embeds the GUID — opens directly in
-  // the CargoWise desktop app without a browser round-trip. The HTTPS URL format is:
-  //   https://ediprod.cw.wisetechglobal.com/link/ShowEditForm/{Controller}/{guid}?lang=en-gb
-  if (httpsLink) {
-    const guidMatch = httpsLink.match(/ShowEditForm\/(\w+)\/([0-9a-f-]{36})/i);
-    if (guidMatch) {
-      const controller = guidMatch[1];
-      const guid = guidMatch[2];
-      const edientLink = 'edient:Command=ShowEditForm&ControllerID=' + controller + '&BusinessEntityPK=' + guid + '&Domain=wtg.zone&Instance=ediProd';
-      return '<a href="' + escapeAttribute(edientLink) + '" title="Open in ediProd" style="color:inherit;text-decoration:underline dotted;cursor:pointer;">' + escapeHtml(jobNumber) + '</a>';
-    }
-    // Fallback to HTTPS if GUID extraction fails
-    return '<a href="' + escapeAttribute(httpsLink) + '" title="Open in ediProd" style="color:inherit;text-decoration:underline dotted;cursor:pointer;" target="_blank" rel="noopener noreferrer">' + escapeHtml(jobNumber) + '</a>';
+function ediProdLink(id, jobUrl) {
+  const url = jobUrl || '';
+  if (url) {
+    return '<a href="' + escapeAttribute(url) + '" title="View issue" style="color:inherit;text-decoration:underline dotted;cursor:pointer;" target="_blank" rel="noopener noreferrer">' + escapeHtml(id) + '</a>';
   }
-
-  const edientMatch = String(jobNumber || '').trim().match(/^(WI|CS|PRJ)\d{8}$/i);
-  if (!edientMatch) return escapeHtml(jobNumber);
-
-  const edientType = edientMatch[1].toUpperCase();
-  const edientLink = 'edient:Command=ShortCode&Id=' + encodeURIComponent(jobNumber) + '&Type=' + encodeURIComponent(edientType);
-  return '<a href="' + escapeAttribute(edientLink) + '" title="Open in ediProd (desktop)" style="color:inherit;text-decoration:underline dotted;cursor:pointer;">' + escapeHtml(jobNumber) + '</a>';
+  return escapeHtml(id);
 }
 
 function getTaskKey(jobNumber, taskSequence) {
@@ -953,30 +932,12 @@ function getSelectedStartableTask(jobNumber, taskSequence) {
   return tasks.find(task => getTaskOptionValue(task) === selector.value) || tasks[0] || null;
 }
 
-function buildTaskCommand(action, jobNumber, taskSequence) {
-  return action + ' ' + jobNumber + (taskSequence ? (' --task ' + taskSequence) : '');
+function buildTaskCommand(action, jobNumber) {
+  return action + ' ' + jobNumber;
 }
 
-function renderLinkedJobText(text, primaryJobNumber, primaryJobUrl) {
-  const value = String(text || '');
-  if (!value) {
-    return '';
-  }
-
-  const pattern = /\b(?:WI|CS|PRJ)\d{8}\b/g;
-  let cursor = 0;
-  let html = '';
-  let match;
-
-  while ((match = pattern.exec(value)) !== null) {
-    html += escapeHtml(value.slice(cursor, match.index));
-    const jobNumber = match[0];
-    html += ediProdLink(jobNumber, jobNumber === primaryJobNumber ? primaryJobUrl : '');
-    cursor = match.index + jobNumber.length;
-  }
-
-  html += escapeHtml(value.slice(cursor));
-  return html;
+function renderLinkedJobText(text) {
+  return escapeHtml(String(text || ''));
 }
 
 function renderCard(item, type) {
@@ -1014,8 +975,6 @@ function renderCard(item, type) {
   html += '<div class="card-header">';
   html += '<div class="job-heading">';
   html += '<span class="job-number">' + ediProdLink(jobNumber, jobUrl) + '</span>';
-  if (jobNumber) html += '<a href="https://crikey.wtg.zone/TestRuns?query=' + encodeURIComponent(jobNumber) + '" target="_blank" rel="noopener noreferrer" title="Open in Crikey" class="crikey-btn"><img src="/crikey.svg" alt="Crikey" /></a>';
-  if (taskSequence) html += '<span class="task-pill">Task ' + escapeHtml(String(taskSequence)) + '</span>';
   if (summaryText && summaryText !== jobNumber) html += '<span class="job-summary">' + summary + '</span>';
   html += '</div>';
   html += '<div>';

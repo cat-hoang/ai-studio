@@ -88,7 +88,7 @@ Full path on Windows: `C:\Users\{USERNAME}\.claude\projects\{encoded}\memory\`
 | `project_overview.md` | Purpose, key paths, operational constraints |
 | `repo_structure.md` | Full directory layout with purposes |
 | `architecture.md` | Worker pipeline phases, CLI adapters, domain plugins, hooks |
-| `ediprod_rules.md` | Hard rules — never complete/start, always claim+suspend |
+| `worker_rules.md` | Operational rules — workspace isolation, commit hygiene, notification requirements |
 | `config_state.md` | config.yaml/local.yaml settings, state.json schema |
 | `tools_reference.md` | All tools/ scripts catalogued by category |
 | `skills_reference.md` | All 5 skills with invocation context |

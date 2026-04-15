@@ -44,8 +44,8 @@ try {
         exit 0
     }
 
-    $jobNumber = Split-Path -Leaf $currentDirectory
-    if ($jobNumber -notmatch '^(WI|CS|PRJ)\d{8}$') {
+    $issueId = Split-Path -Leaf $currentDirectory
+    if ([string]::IsNullOrWhiteSpace($issueId)) {
         Write-HookDecision -Decision 'approve'
         exit 0
     }
@@ -57,7 +57,7 @@ try {
         $state.workers +
         $state.completedJobs +
         $state.failedJobs |
-            Where-Object { $_.jobNumber -eq $jobNumber }
+            Where-Object { ($_.issueId -eq $issueId) -or ($_.jobNumber -eq $issueId) }
     ) | Select-Object -First 1
 
     if (-not $job) {
@@ -84,16 +84,15 @@ try {
     }
 
     $currentStatus = ([string]$job.status).ToLowerInvariant()
-    $taskSeqParam = if (-not [string]::IsNullOrWhiteSpace([string]$job.taskSequence)) { " -TaskSequence $($job.taskSequence)" } else { '' }
     $instruction = if ($currentStatus -eq 'done') {
-        "Run .\\tools\\finalize-ratatosk-worker.ps1 -JobNumber $jobNumber$taskSeqParam -Status done -Summary '<final summary>' before stopping."
+        "Run .\\tools\\finalize-ratatosk-worker.ps1 -IssueId $issueId -Status done -Summary '<final summary>' before stopping."
     } else {
-        "Run .\\tools\\finalize-ratatosk-worker.ps1 -JobNumber $jobNumber$taskSeqParam -Status failed -Summary '<failure summary>' -ErrorMessage '<error>' before stopping."
+        "Run .\\tools\\finalize-ratatosk-worker.ps1 -IssueId $issueId -Status failed -Summary '<failure summary>' -ErrorMessage '<error>' before stopping."
     }
 
     Write-HookDecision `
         -Decision 'block' `
-        -Reason "Ratatosk worker $jobNumber has no final report yet." `
+        -Reason "Ratatosk worker $issueId has no final report yet." `
         -SystemMessage "Before stopping a Ratatosk worker, capture a final report artifact and notifications. $instruction"
     exit 0
 } catch {

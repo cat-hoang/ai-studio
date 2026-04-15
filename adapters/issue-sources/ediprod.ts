@@ -99,19 +99,19 @@ export const ediprodAdapter: IssueSourceAdapter = {
 // ---------------------------------------------------------------------------
 
 function bmResultToIssue(r: Record<string, unknown>, staffCode: string): Issue {
-  const jobNumber = str(r['jobNumber']);
+  const issueId = str(r['jobNumber']);
   const taskType = str(r['type']) || 'feature';
   const desc = str(r['description']) || str(r['jobSummary']);
 
   return {
-    jobNumber,
-    jobGuid: str(r['parentJobPk']) || jobNumber,
+    issueId,
+    jobGuid: str(r['parentJobPk']) || issueId,
     taskSequence: str(r['sequence']),
     taskType,
     assignee: str(r['assignedStaff']) || staffCode,
     startableTasks: [{ taskSequence: str(r['sequence']), taskType, taskDescription: desc }],
-    summary: str(r['jobSummary']) || desc,
-    description: desc,
+    summary: str(r['jobSummary']) || desc || '',
+    description: desc || '',
     zone: 0,
     source: ADAPTER,
     sources: [ADAPTER],

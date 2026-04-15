@@ -1,29 +1,28 @@
 ---
-description: "Add a task/work item to the Ratatosk waiting queue"
+description: "Add an issue to the Ratatosk waiting queue"
 ---
 
 # Ratatosk Queue
 
-Add a task to the Ratatosk waiting queue for later processing.
+Add an issue to the Ratatosk waiting queue for later processing.
 
-**Usage:** `/ratatosk-queue WI00975129` or `/ratatosk-queue WI00975129 CDF "Description here"`
+**Usage:** `/ratatosk-queue GH-42` or `/ratatosk-queue GH-42 bugfix "Description here"`
 
 ## Step 1: Parse Arguments
 
 Parse the provided arguments:
-- **jobNumber** (required): The work item / job number (e.g., `WI00975129`)
-- **taskType** (optional): The task type code (e.g., `CDF`, `EDI`, `MAP`)
+- **issueId** (required): The issue identifier (e.g., `GH-42`, `LIN-123`, `PROJ-456`)
+- **taskType** (optional): The task type (e.g., `feature`, `bugfix`, `refactor`)
 - **description** (optional): A human-readable description of the task
 
-If the argument string contains only the job number, proceed to Step 2. If taskType and/or description are also provided, skip to Step 3.
+If the argument string contains only the issueId, proceed to Step 2. If taskType and/or description are also provided, skip to Step 3.
 
 ## Step 2: Look Up Missing Details
 
-If only jobNumber was provided:
-- Determine the job type from the prefix (WI → workitem, CS → incident).
-- Run `edi workitem get {jobNumber}` (for WI) or `edi cs get {jobNumber}` (for CS) to retrieve the job details.
-- Then run `edi task list {jobNumber}` to retrieve the workflow tasks.
-- Extract the taskType and description from the response.
+If only issueId was provided:
+- Try to find the issue in the configured issue source (GitHub Issues, Linear, Jira, or file).
+- Use `gh issue view {issueId}` for GitHub, or the appropriate adapter API for others.
+- Extract taskType (infer from labels/type) and description from the response.
 - If the lookup fails, warn the user but continue with taskType and description as "unknown".
 
 ## Step 3: Read State
@@ -39,13 +38,13 @@ Read `temp/state.json`. If the file does not exist, initialize it with:
 
 ## Step 4: Check for Duplicates
 
-Check if the jobNumber already exists in:
+Check if the issueId already exists in:
 - `waitingQueue` array (already queued)
 - `workers` array (already being worked on)
 
 If a duplicate is found, warn the user:
-- If in waitingQueue: "Warning: {jobNumber} is already in the waiting queue (queued at {queuedAt})."
-- If in workers: "Warning: {jobNumber} already has an active worker (status: {status})."
+- If in waitingQueue: "Warning: {issueId} is already in the waiting queue (queued at {queuedAt})."
+- If in workers: "Warning: {issueId} already has an active worker (status: {status})."
 
 Ask the user if they want to continue adding it anyway. If they decline, stop.
 
@@ -54,7 +53,7 @@ Ask the user if they want to continue adding it anyway. If they decline, stop.
 Add the task to the `waitingQueue` array:
 ```json
 {
-  "jobNumber": "{jobNumber}",
+  "issueId": "{issueId}",
   "taskType": "{taskType}",
   "description": "{description}",
   "queuedAt": "{ISO timestamp}",
@@ -69,12 +68,12 @@ Write the updated state back to `temp/state.json`.
 ## Step 7: Send Notification
 
 Send a Teams notification using the queue-added template:
-- Message: "Ratatosk: Queued {jobNumber} ({taskType}) - {description}"
+- Message: "Ratatosk: Queued {issueId} ({taskType}) - {description}"
 
 ## Step 8: Confirm
 
 Print confirmation to the console:
 ```
-Queued {jobNumber} ({taskType}). Run /ratatosk-start to spawn workers.
+Queued {issueId} ({taskType}). Run /ratatosk-start to spawn workers.
 ```
 

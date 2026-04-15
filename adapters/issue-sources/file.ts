@@ -99,19 +99,19 @@ function normalizeIssue(item: unknown, idx: number): Issue {
 
   const r = item as Record<string, unknown>;
 
-  const jobNumber = str(r['jobNumber']) || str(r['id']) || str(r['key']) || `FILE-${idx + 1}`;
+  const issueId = str(r['issueId']) || str(r['jobNumber']) || str(r['id']) || str(r['key']) || `FILE-${idx + 1}`;
   const taskType = str(r['taskType']) || str(r['type']) || inferTaskTypeFromTitle(str(r['summary']) || '');
 
   return {
-    jobNumber,
-    jobGuid: str(r['jobGuid']) || str(r['guid']) || jobNumber,
-    taskSequence: str(r['taskSequence']) || '',
+    issueId,
+    jobGuid: str(r['jobGuid']) || str(r['guid']) || issueId,
+    taskSequence: str(r['taskSequence']) || undefined,
     taskType,
     assignee: str(r['assignee']) || str(r['staffCode']) || '',
     startableTasks: Array.isArray(r['startableTasks'])
       ? r['startableTasks'] as Issue['startableTasks']
-      : [{ taskSequence: '', taskType, taskDescription: str(r['summary']) || '' }],
-    summary: str(r['summary']) || str(r['title']) || jobNumber,
+      : [{ taskType, taskDescription: str(r['summary']) || '' }],
+    summary: str(r['summary']) || str(r['title']) || issueId,
     description: str(r['description']) || str(r['summary']) || '',
     zone: typeof r['zone'] === 'number' ? r['zone'] : parseInt(str(r['zone']) || '0', 10) || 0,
     source: ADAPTER,
@@ -120,15 +120,14 @@ function normalizeIssue(item: unknown, idx: number): Issue {
   };
 }
 
-function emptyIssue(jobNumber: string): Issue {
+function emptyIssue(issueId: string): Issue {
   return {
-    jobNumber,
-    jobGuid: jobNumber,
-    taskSequence: '',
+    issueId,
+    jobGuid: issueId,
     taskType: 'feature',
     assignee: '',
-    startableTasks: [{ taskSequence: '', taskType: 'feature', taskDescription: '' }],
-    summary: jobNumber,
+    startableTasks: [{ taskType: 'feature', taskDescription: '' }],
+    summary: issueId,
     description: '',
     zone: 0,
     source: ADAPTER,

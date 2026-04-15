@@ -65,14 +65,12 @@ The `temp\` folder is gitignored and will never be committed.
 
 | Command | Purpose |
 |---------|---------|
-| `start <WI> [--task <seq>]` | Launch worker immediately |
-| `queue <WI> [--task <seq>] [type] [desc]` | Add to waiting queue |
-| `status [WI] [--task <seq>]` | Show state / per-job detail |
-| `resume/retry/cleanup <WI> [--task]` | Resume/retry/remove job |
-| `notes <WI> --task <seq>` | Read ediProd task notes |
-| `setnotes <WI> --task <seq> <content>` | Overwrite notes (multi-line OK via email/Teams) |
-| `reply/answer <WI> <msg>` | Answer worker waiting for input |
-| `never-auto/allow-auto <WI> --task` | Dashboard only — auto-launch control |
+| `start <issue-id>` | Launch worker immediately |
+| `queue <issue-id> [type] [desc]` | Add to waiting queue |
+| `status [issue-id]` | Show state / per-job detail |
+| `resume/retry/cleanup <issue-id>` | Resume/retry/remove job |
+| `reply/answer <issue-id> <msg>` | Answer worker waiting for input |
+| `never-auto/allow-auto <issue-id>` | Dashboard only — auto-launch control |
 
 ### Startable poller
 
@@ -126,7 +124,7 @@ Full path on Windows: `C:\Users\{USERNAME}\.claude\projects\{encoded}\memory\`
 | `project_overview.md` | Purpose, key paths, operational constraints |
 | `repo_structure.md` | Full directory layout with purposes |
 | `architecture.md` | Worker pipeline phases, CLI adapters, domain plugins, hooks |
-| `ediprod_rules.md` | Hard rules — never complete/start, always claim+suspend |
+| `worker_rules.md` | Operational rules — workspace isolation, commit hygiene, notification requirements |
 | `config_state.md` | config.yaml/local.yaml settings, state.json schema |
 | `tools_reference.md` | All tools/ scripts catalogued by category |
 | `skills_reference.md` | All 5 skills with invocation context |

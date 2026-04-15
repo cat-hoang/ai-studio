@@ -23,12 +23,7 @@ For each worker with status "completed":
    - The PR is in "open" or "merged" state
    - Log any PRs that are closed/missing as warnings
 
-2. **Update EDI Prod**: Run `edi task list {jobNumber}` to find the task, then run `edi task notes append {taskId} --content "..."` with:
-   - PR URLs and their current state (open/merged)
-   - Completion summary (phase reached, any notable outcomes)
-   - Timestamp of completion
-
-3. **Keep Workspace Intact**: Do not clean up the workspace automatically. A completed task does not mean the whole work item is finished.
+2. **Keep Workspace Intact**: Do not clean up the workspace automatically. A completed task does not mean the whole work item is finished.
 
 ### Running Workers (still in progress)
 
@@ -40,13 +35,7 @@ For each worker with status "running":
    ```
    If there are no changes to commit, that is fine -- skip the commit.
 
-2. **Save Context to EDI Prod**: Run `edi task list {jobNumber}` to find the task, then run `edi task notes append {taskId} --content "..."` with:
-   - Current phase the worker was in
-   - Branch name
-   - Brief context of what was being worked on
-   - "Paused for end-of-day"
-
-3. **Update State**: Set the worker's status to "paused" in `temp/state.json`.
+2. **Update State**: Set the worker's status to "paused" in `temp/state.json`.
 
 ### Failed Workers
 
@@ -54,32 +43,26 @@ For each worker with status "failed":
 
 1. **Log Error Details**: Read any error information from the worker's state (error field, last phase, etc.).
 
-2. **Save Error Context to EDI Prod**: Run `edi task list {jobNumber}` to find the task, then run `edi task notes append {taskId} --content "..."` with:
-   - Error summary
-   - Phase where failure occurred
-   - Any relevant log paths or diagnostic information
-   - "Failed - requires manual investigation"
-
 ## Step 3: Build Daily Summary
 
 Compile a daily summary with the following sections:
 
 ### Tasks Completed
 For each completed worker:
-- Job number and task type
+- Issue ID and task type
 - PR links with status (open/merged)
 - Brief completion note
 
 ### Tasks In Progress (Paused)
 For each paused worker:
-- Job number and task type
+- Issue ID and task type
 - Current phase
 - Branch name
 - Brief context of remaining work
 
 ### Tasks Failed
 For each failed worker:
-- Job number and task type
+- Issue ID and task type
 - Error summary
 - Phase where failure occurred
 

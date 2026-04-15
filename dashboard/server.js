@@ -1530,23 +1530,6 @@ function handleGetIndex(req, res) {
   });
 }
 
-function handleGetCrikeySvg(req, res) {
-  const filePath = path.join(DASHBOARD_DIR, 'crikey.svg');
-  fs.readFile(filePath, (err, content) => {
-    if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
-      res.end('crikey.svg not found');
-      return;
-    }
-    res.writeHead(200, {
-      'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=86400',
-      'Access-Control-Allow-Origin': '*',
-    });
-    res.end(content);
-  });
-}
-
 function handleGetFavicon(req, res) {
   const filePath = path.join(DASHBOARD_DIR, 'favicon.ico');
   fs.readFile(filePath, (err, content) => {
@@ -2437,7 +2420,6 @@ const server = http.createServer(async (req, res) => {
   try {
     if (method === 'GET' && pathname === '/') return handleGetIndex(req, res);
     if (method === 'GET' && pathname === '/favicon.ico') return handleGetFavicon(req, res);
-    if (method === 'GET' && pathname === '/crikey.svg') return handleGetCrikeySvg(req, res);
     if (method === 'GET' && pathname === '/api/state') return handleGetState(req, res);
     if (method === 'POST' && pathname === '/api/jump') return await handleJump(req, res);
     if (method === 'POST' && pathname === '/api/queue') return await handleQueue(req, res);
