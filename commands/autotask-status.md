@@ -1,14 +1,14 @@
----
-description: "Show Ratatosk orchestrator status"
+﻿---
+description: "Show Autotask orchestrator status"
 ---
 
-# Ratatosk Status
+# Autotask Status
 
-Display the current status of the Ratatosk orchestrator, including waiting queue and active workers.
+Display the current status of the Autotask orchestrator, including waiting queue and active workers.
 
 ## Step 1: Read State
 
-Read `temp/state.json`. If the file does not exist, report "No Ratatosk state found. Run /ratatosk-start to begin." and stop.
+Read `temp/state.json`. If the file does not exist, report "No Autotask state found. Run /autotask-start to begin." and stop.
 
 ## Step 2: Read Config
 
@@ -20,7 +20,7 @@ Present the following formatted output:
 
 ### Header
 ```
-=== Ratatosk Status ===
+=== Autotask Status ===
 Date: {today's date}
 Dashboard: http://localhost:{dashboard_port}
 ```

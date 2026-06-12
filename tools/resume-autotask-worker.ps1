@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [string]$JobNumber,
@@ -14,7 +14,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 
 function Get-FirstNonEmptyValue {
     param(
@@ -68,8 +68,8 @@ function New-ResumePromptContent {
         [string](Get-ObjectPropertyValue -Object $Worker -Name 'summary' -Default ''),
         $jobNumber
     )
-    $existingPrUrls = @(Get-RatatoskUniqueStringArray -Values @((Get-ObjectPropertyValue -Object $Worker -Name 'prUrls' -Default @())))
-    $repos = @(Get-RatatoskUniqueStringArray -Values @((Get-ObjectPropertyValue -Object $Worker -Name 'repos' -Default @())))
+    $existingPrUrls = @(Get-AutotaskUniqueStringArray -Values @((Get-ObjectPropertyValue -Object $Worker -Name 'prUrls' -Default @())))
+    $repos = @(Get-AutotaskUniqueStringArray -Values @((Get-ObjectPropertyValue -Object $Worker -Name 'repos' -Default @())))
     $repoGroup = [string](Get-ObjectPropertyValue -Object $Worker -Name 'repoGroup' -Default '')
     $selectionMode = Get-FirstNonEmptyValue -Values @(
         [string](Get-ObjectPropertyValue -Object $Worker -Name 'batchSelectionMode' -Default ''),
@@ -88,7 +88,7 @@ function New-ResumePromptContent {
     $elapsedMsOffset = [double](Get-ObjectPropertyValue -Object $Worker -Name 'elapsedMsOffset' -Default 0)
 
     @"
-You are Ratatosk Task Worker for $jobNumber ($taskType).
+You are Autotask Task Worker for $jobNumber ($taskType).
 Read your full instructions from `..\..\agents\task-worker.md`.
 Your workspace is $WorkspaceRelativePath.
 Your job number is $jobNumber, task sequence is $taskSequence, task type is $taskType, zone is $zone.
@@ -101,11 +101,11 @@ Repo selection: $(if (-not [string]::IsNullOrWhiteSpace($repoGroup)) { "$repoGro
 Repo selection reason: $selectionReason
 Previous final summary: $(if (-not [string]::IsNullOrWhiteSpace($finalSummary)) { $finalSummary } else { '(none)' })
 Keep the existing terminal tab title exactly as launched. Do not rename the terminal tab or set an application title.
-Publish your live activity via `..\..\tools\set-ratatosk-worker-activity.ps1` using granular statuses such as starting, workspace-verify, syncing, planning, thinking, researching, triaging, designing, implementing, coding, building, validating, testing, documenting, reviewing, creating-pr, waiting-review, awaiting-user-input, input-received, retrying, blocked, completed, and failed. Update it often whenever your actual work changes.
-When you choose a build/test scope or reuse/download shared Crikey artifacts, record it with `..\..\tools\update-ratatosk-build-plan.ps1` so Ratatosk can track targeted plans and shared artifact usage.
-If a build or test failure appears unrelated to your targeted scope, environment, or baseline artifacts, run `..\..\tools\classify-ratatosk-build-failure.ps1` before finalizing so the failure is labelled correctly.
-If you need a user decision, use `..\..\tools\request-ratatosk-user-input.ps1` and then wait with `..\..\tools\wait-for-ratatosk-user-input.ps1`.
-When you finish or fail, do not stop silently. Run `..\..\tools\finalize-ratatosk-worker.ps1 -TaskSequence $taskSequence` (when task sequence is known) so Ratatosk always captures a final report, updates temp/state.json, and sends the completion or failure report.
+Publish your live activity via `..\..\tools\set-autotask-worker-activity.ps1` using granular statuses such as starting, workspace-verify, syncing, planning, thinking, researching, triaging, designing, implementing, coding, building, validating, testing, documenting, reviewing, creating-pr, waiting-review, awaiting-user-input, input-received, retrying, blocked, completed, and failed. Update it often whenever your actual work changes.
+When you choose a build/test scope or reuse/download shared Crikey artifacts, record it with `..\..\tools\update-autotask-build-plan.ps1` so Autotask can track targeted plans and shared artifact usage.
+If a build or test failure appears unrelated to your targeted scope, environment, or baseline artifacts, run `..\..\tools\classify-autotask-build-failure.ps1` before finalizing so the failure is labelled correctly.
+If you need a user decision, use `..\..\tools\request-autotask-user-input.ps1` and then wait with `..\..\tools\wait-for-autotask-user-input.ps1`.
+When you finish or fail, do not stop silently. Run `..\..\tools\finalize-autotask-worker.ps1 -TaskSequence $taskSequence` (when task sequence is known) so Autotask always captures a final report, updates temp/state.json, and sends the completion or failure report.
 Resume the paused work from the retained workspace and continue immediately.
 "@
 }
@@ -116,14 +116,14 @@ function Main {
         throw "Invalid job number: $JobNumber"
     }
 
-    $state = Read-RatatoskState
-    $matchingWorkers = @($state.workers | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence })
+    $state = Read-AutotaskState
+    $matchingWorkers = @($state.workers | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence })
     $pausedWorkers = @($matchingWorkers | Where-Object {
             ([string](Get-ObjectPropertyValue -Object $_ -Name 'status' -Default '')).ToLowerInvariant() -eq 'paused' -or
             ([string](Get-ObjectPropertyValue -Object $_ -Name 'activityStatus' -Default '')).ToLowerInvariant() -eq 'paused'
         })
-    $completedWorkers = @($state.completedJobs | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence })
-    $failedWorkers = @($state.failedJobs | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence })
+    $completedWorkers = @($state.completedJobs | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence })
+    $failedWorkers = @($state.failedJobs | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence })
 
     $workerBucket = ''
     $worker = $null
@@ -153,13 +153,13 @@ function Main {
         [string](Get-ObjectPropertyValue -Object $worker -Name 'workspacePath' -Default ''),
         ('workspaces\' + $resolvedJobNumber)
     )
-    $resolvedWorkspacePath = Resolve-RatatoskPath -Path $workspacePath
+    $resolvedWorkspacePath = Resolve-AutotaskPath -Path $workspacePath
     if (-not (Test-Path -LiteralPath $resolvedWorkspacePath)) {
         throw "Workspace path not found for ${resolvedJobNumber}: $resolvedWorkspacePath"
     }
 
-    $workspaceRelativePath = ConvertTo-RatatoskRelativePath -Path $resolvedWorkspacePath
-    $promptFilePath = Join-Path $resolvedWorkspacePath '.ratatosk-prompt.md'
+    $workspaceRelativePath = ConvertTo-AutotaskRelativePath -Path $resolvedWorkspacePath
+    $promptFilePath = Join-Path $resolvedWorkspacePath '.autotask-prompt.md'
     $promptContent = New-ResumePromptContent -Worker $worker -WorkspaceRelativePath $workspaceRelativePath
     Write-Utf8File -Path $promptFilePath -Content $promptContent
     $taskType = Get-FirstNonEmptyValue -Values @([string](Get-ObjectPropertyValue -Object $worker -Name 'taskType' -Default ''), 'unknown')
@@ -168,24 +168,24 @@ function Main {
 
     $timestamp = (Get-Date).ToUniversalTime().ToString('o')
     $sourceText = Get-FirstNonEmptyValue -Values @($Source, 'manual-resume')
-    $sources = @(Get-RatatoskUniqueStringArray -Values @(
+    $sources = @(Get-AutotaskUniqueStringArray -Values @(
         (Get-ObjectPropertyValue -Object $worker -Name 'sources' -Default @()),
         @($sourceText)
     ))
 
-    Set-RatatoskProperty -Object $worker -Name 'status' -Value 'running'
-    Set-RatatoskProperty -Object $worker -Name 'phase' -Value 'starting'
-    Set-RatatoskProperty -Object $worker -Name 'activityStatus' -Value 'starting'
+    Set-AutotaskProperty -Object $worker -Name 'status' -Value 'running'
+    Set-AutotaskProperty -Object $worker -Name 'phase' -Value 'starting'
+    Set-AutotaskProperty -Object $worker -Name 'activityStatus' -Value 'starting'
     $resumeActivityMessage = if ($statusKey -eq 'done' -or $statusKey -eq 'completed' -or $phaseKey -eq 'completed') {
         'Relaunching retained workspace after previous completion.'
     } else {
         'Launching resumed worker from retained workspace.'
     }
-    Set-RatatoskProperty -Object $worker -Name 'activityMessage' -Value $resumeActivityMessage
-    Set-RatatoskProperty -Object $worker -Name 'source' -Value $sourceText
-    Set-RatatoskProperty -Object $worker -Name 'sources' -Value $sources
-    Set-RatatoskProperty -Object $worker -Name 'queuedVia' -Value $sourceText
-    Set-RatatoskProperty -Object $worker -Name 'queuedAt' -Value $timestamp
+    Set-AutotaskProperty -Object $worker -Name 'activityMessage' -Value $resumeActivityMessage
+    Set-AutotaskProperty -Object $worker -Name 'source' -Value $sourceText
+    Set-AutotaskProperty -Object $worker -Name 'sources' -Value $sources
+    Set-AutotaskProperty -Object $worker -Name 'queuedVia' -Value $sourceText
+    Set-AutotaskProperty -Object $worker -Name 'queuedAt' -Value $timestamp
 
     # Accumulate elapsed time from the completed/failed session before clearing the timestamps.
     # This preserves total working time across multiple Reopen cycles. The gap between completedAt
@@ -200,7 +200,7 @@ function Main {
                 $sessionMs = ($prevEnd - $prevStart).TotalMilliseconds
                 if ($sessionMs -gt 0) {
                     $existingOffsetMs = [double](Get-ObjectPropertyValue -Object $worker -Name 'elapsedMsOffset' -Default 0)
-                    Set-RatatoskProperty -Object $worker -Name 'elapsedMsOffset' -Value ([math]::Round($existingOffsetMs + $sessionMs))
+                    Set-AutotaskProperty -Object $worker -Name 'elapsedMsOffset' -Value ([math]::Round($existingOffsetMs + $sessionMs))
                 }
             } catch {
                 # Non-fatal: if timestamps can't be parsed, skip accumulation and continue.
@@ -208,60 +208,60 @@ function Main {
         }
     }
 
-    Set-RatatoskProperty -Object $worker -Name 'startedAt' -Value $timestamp
-    Set-RatatoskProperty -Object $worker -Name 'completedAt' -Value ''
-    Set-RatatoskProperty -Object $worker -Name 'error' -Value ''
-    Set-RatatoskProperty -Object $worker -Name 'finalReportedAt' -Value ''
-    Set-RatatoskProperty -Object $worker -Name 'finalReportSummary' -Value ''
-    Set-RatatoskProperty -Object $worker -Name 'cleanupBlockedAt' -Value ''
-    Set-RatatoskProperty -Object $worker -Name 'cleanupBlockedReason' -Value ''
-    Set-RatatoskProperty -Object $worker -Name 'userInputRequest' -Value $null
-    Set-RatatoskProperty -Object $worker -Name 'lastUserInput' -Value $null
+    Set-AutotaskProperty -Object $worker -Name 'startedAt' -Value $timestamp
+    Set-AutotaskProperty -Object $worker -Name 'completedAt' -Value ''
+    Set-AutotaskProperty -Object $worker -Name 'error' -Value ''
+    Set-AutotaskProperty -Object $worker -Name 'finalReportedAt' -Value ''
+    Set-AutotaskProperty -Object $worker -Name 'finalReportSummary' -Value ''
+    Set-AutotaskProperty -Object $worker -Name 'cleanupBlockedAt' -Value ''
+    Set-AutotaskProperty -Object $worker -Name 'cleanupBlockedReason' -Value ''
+    Set-AutotaskProperty -Object $worker -Name 'userInputRequest' -Value $null
+    Set-AutotaskProperty -Object $worker -Name 'lastUserInput' -Value $null
     if (-not (Get-ObjectPropertyValue -Object $worker -Name 'artifactUsage' -Default $null)) {
-        Set-RatatoskProperty -Object $worker -Name 'artifactUsage' -Value (New-RatatoskArtifactUsage -Timestamp $timestamp)
+        Set-AutotaskProperty -Object $worker -Name 'artifactUsage' -Value (New-AutotaskArtifactUsage -Timestamp $timestamp)
     }
     if (-not (Get-ObjectPropertyValue -Object $worker -Name 'buildPlan' -Default $null)) {
-        Set-RatatoskProperty -Object $worker -Name 'buildPlan' -Value (New-RatatoskBuildPlan -Timestamp $timestamp)
+        Set-AutotaskProperty -Object $worker -Name 'buildPlan' -Value (New-AutotaskBuildPlan -Timestamp $timestamp)
     }
     if (-not (Get-ObjectPropertyValue -Object $worker -Name 'buildFailure' -Default $null)) {
-        Set-RatatoskProperty -Object $worker -Name 'buildFailure' -Value (New-RatatoskBuildFailure -Timestamp $timestamp)
+        Set-AutotaskProperty -Object $worker -Name 'buildFailure' -Value (New-AutotaskBuildFailure -Timestamp $timestamp)
     }
-    Set-RatatoskWorkerHeartbeat -Worker $worker -Timestamp $timestamp
-    $workerKey = Get-RatatoskJobObjectKey -Job $worker
+    Set-AutotaskWorkerHeartbeat -Worker $worker -Timestamp $timestamp
+    $workerKey = Get-AutotaskJobObjectKey -Job $worker
     $originalWorkers = @($state.workers)
     $originalCompletedJobs = @($state.completedJobs)
     $originalFailedJobs = @($state.failedJobs)
     if ($workerBucket -ne 'workers') {
-        $state.workers = @($state.workers | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey }) + $worker
-        $state.completedJobs = @($state.completedJobs | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey })
-        $state.failedJobs = @($state.failedJobs | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey })
+        $state.workers = @($state.workers | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey }) + $worker
+        $state.completedJobs = @($state.completedJobs | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey })
+        $state.failedJobs = @($state.failedJobs | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey })
     }
-    Write-RatatoskState -State $state
+    Write-AutotaskState -State $state
 
     $launchResult = $null
     try {
-        $launchResult = & (Join-Path $PSScriptRoot 'launch-ratatosk-worker.ps1') `
+        $launchResult = & (Join-Path $PSScriptRoot 'launch-autotask-worker.ps1') `
             -Cli 'auto' `
             -JobNumber $resolvedJobNumber `
             -TaskType $taskType `
             -Zone $zone `
             -WorkspacePath $resolvedWorkspacePath `
             -PromptFile $promptFilePath `
-            -PluginDir (Get-RatatoskRootPath) `
+            -PluginDir (Get-AutotaskRootPath) `
             -PassThru
     } catch {
-        Set-RatatoskProperty -Object $worker -Name 'status' -Value 'paused'
-        Set-RatatoskProperty -Object $worker -Name 'phase' -Value 'paused'
-        Set-RatatoskProperty -Object $worker -Name 'activityStatus' -Value 'paused'
-        Set-RatatoskProperty -Object $worker -Name 'activityMessage' -Value 'Resume launch failed; worker remains paused.'
-        Set-RatatoskProperty -Object $worker -Name 'error' -Value $_.Exception.Message
-        Set-RatatoskWorkerHeartbeat -Worker $worker -Timestamp ((Get-Date).ToUniversalTime().ToString('o'))
+        Set-AutotaskProperty -Object $worker -Name 'status' -Value 'paused'
+        Set-AutotaskProperty -Object $worker -Name 'phase' -Value 'paused'
+        Set-AutotaskProperty -Object $worker -Name 'activityStatus' -Value 'paused'
+        Set-AutotaskProperty -Object $worker -Name 'activityMessage' -Value 'Resume launch failed; worker remains paused.'
+        Set-AutotaskProperty -Object $worker -Name 'error' -Value $_.Exception.Message
+        Set-AutotaskWorkerHeartbeat -Worker $worker -Timestamp ((Get-Date).ToUniversalTime().ToString('o'))
         if ($workerBucket -ne 'workers') {
             $state.workers = $originalWorkers
             $state.completedJobs = $originalCompletedJobs
             $state.failedJobs = $originalFailedJobs
         }
-        Write-RatatoskState -State $state
+        Write-AutotaskState -State $state
         throw
     }
 
@@ -271,7 +271,7 @@ function Main {
         mode = 'resume'
         workerCli = if ($launchResult) { [string]$launchResult.Cli } else { 'auto' }
         workspacePath = $workspaceRelativePath
-        promptFile = (ConvertTo-RatatoskRelativePath -Path $promptFilePath)
+        promptFile = (ConvertTo-AutotaskRelativePath -Path $promptFilePath)
         launched = $true
         message = "Resumed worker for $resolvedJobNumber."
     }
@@ -293,8 +293,8 @@ function Main {
 function MainLaunchOnly {
     $resolvedJobNumber = $JobNumber.Trim().ToUpperInvariant()
 
-    $state = Read-RatatoskState
-    $worker = @($state.workers | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+    $state = Read-AutotaskState
+    $worker = @($state.workers | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
     if (-not $worker) {
         throw "$resolvedJobNumber was not found in workers (state may not have been updated yet)."
     }
@@ -303,13 +303,13 @@ function MainLaunchOnly {
         [string](Get-ObjectPropertyValue -Object $worker -Name 'workspacePath' -Default ''),
         ('workspaces\' + $resolvedJobNumber)
     )
-    $resolvedWorkspacePath = Resolve-RatatoskPath -Path $workspacePath
+    $resolvedWorkspacePath = Resolve-AutotaskPath -Path $workspacePath
     if (-not (Test-Path -LiteralPath $resolvedWorkspacePath)) {
         throw "Workspace path not found for ${resolvedJobNumber}: $resolvedWorkspacePath"
     }
 
-    $workspaceRelativePath = ConvertTo-RatatoskRelativePath -Path $resolvedWorkspacePath
-    $promptFilePath = Join-Path $resolvedWorkspacePath '.ratatosk-prompt.md'
+    $workspaceRelativePath = ConvertTo-AutotaskRelativePath -Path $resolvedWorkspacePath
+    $promptFilePath = Join-Path $resolvedWorkspacePath '.autotask-prompt.md'
     $promptContent = New-ResumePromptContent -Worker $worker -WorkspaceRelativePath $workspaceRelativePath
     Write-Utf8File -Path $promptFilePath -Content $promptContent
 
@@ -317,14 +317,14 @@ function MainLaunchOnly {
     $zoneRaw = Get-ObjectPropertyValue -Object $worker -Name 'zone' -Default $null
     $zone = if ($null -ne $zoneRaw -and "$zoneRaw".Trim()) { [int]$zoneRaw } else { 0 }
 
-    $launchResult = & (Join-Path $PSScriptRoot 'launch-ratatosk-worker.ps1') `
+    $launchResult = & (Join-Path $PSScriptRoot 'launch-autotask-worker.ps1') `
         -Cli 'auto' `
         -JobNumber $resolvedJobNumber `
         -TaskType $taskType `
         -Zone $zone `
         -WorkspacePath $resolvedWorkspacePath `
         -PromptFile $promptFilePath `
-        -PluginDir (Get-RatatoskRootPath) `
+        -PluginDir (Get-AutotaskRootPath) `
         -PassThru
 
     $result = [PSCustomObject]@{
@@ -333,7 +333,7 @@ function MainLaunchOnly {
         mode          = 'reopen-launch'
         workerCli     = if ($launchResult) { [string]$launchResult.Cli } else { 'auto' }
         workspacePath = $workspaceRelativePath
-        promptFile    = (ConvertTo-RatatoskRelativePath -Path $promptFilePath)
+        promptFile    = (ConvertTo-AutotaskRelativePath -Path $promptFilePath)
         launched      = $true
         message       = "Launched worker tab for $resolvedJobNumber."
     }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * File adapter — reads issues from a local JSON file.
  *
  * Useful for offline testing, demos, and custom pipelines that write issues
@@ -9,7 +9,7 @@
  *   issue_source:
  *     adapter: file
  *     file:
- *       path: issues.json         # path to the issues file (relative to ratatosk root or absolute)
+ *       path: issues.json         # path to the issues file (relative to autotask root or absolute)
  *
  * File format — array of Issue objects (same schema as the canonical Issue type),
  * or a simplified shorthand:
@@ -87,7 +87,7 @@ export const fileAdapter: IssueSourceAdapter = {
 
 function resolveFilePath(filePath: string): string {
   if (path.isAbsolute(filePath)) return filePath;
-  // Resolve relative to the ratatosk repo root (parent of adapters/)
+  // Resolve relative to the autotask repo root (parent of adapters/)
   const repoRoot = path.resolve(import.meta.dirname, '..', '..');
   return path.join(repoRoot, filePath);
 }

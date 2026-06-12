@@ -1,11 +1,11 @@
-# Ratatosk Email Integration Guide
+﻿# Autotask Email Integration Guide
 
 ## What email is used for
 
-Ratatosk uses email for two different inbound flows:
+Autotask uses email for two different inbound flows:
 
 1. **Worker replies** when a worker asks you a question
-2. **Structured command emails** when you want to control Ratatosk asynchronously
+2. **Structured command emails** when you want to control Autotask asynchronously
 
 Email is asynchronous. It depends on the Mail Poller, Microsoft Graph access, and the configured mail folder.
 
@@ -23,31 +23,31 @@ smtp_to: "your.email@wisetechglobal.com"
 
 ### Mail polling
 
-Ratatosk reads inbound mail through Microsoft Graph.
+Autotask reads inbound mail through Microsoft Graph.
 
 Important settings:
 
 ~~~yaml
 email_polling_interval_ms: 30000
-email_poll_folder_path: "Inbox/Ratatosk"
+email_poll_folder_path: "Inbox/Autotask"
 email_command_intake_enabled: false
 email_command_send_replies: true
-email_command_subject_prefix: "Ratatosk Command"
+email_command_subject_prefix: "Autotask Command"
 email_command_allowed_senders: ""
 ~~~
 
 Notes:
 
-- The shared default folder is `Inbox/Ratatosk`
+- The shared default folder is `Inbox/Autotask`
 - You can override the folder locally if you prefer a different mailbox path
 - Command emails are ignored unless `email_command_intake_enabled: true`
 
 ## Worker reply flow
 
-When a worker needs your input, Ratatosk sends a message with a subject similar to:
+When a worker needs your input, Autotask sends a message with a subject similar to:
 
 ~~~text
-Ratatosk Input Needed: WI00992034 [request-guid]
+Autotask Input Needed: WI00992034 [request-guid]
 ~~~
 
 To answer:
@@ -56,21 +56,21 @@ To answer:
 2. Keep the subject unchanged
 3. Put your answer at the top of the reply
 
-Ratatosk matches the request ID in the subject and routes the reply back to the worker automatically.
+Autotask matches the request ID in the subject and routes the reply back to the worker automatically.
 
 If the reply is not picked up:
 
 - check the Mail Poller in the dashboard
 - confirm Graph auth is still valid
-- confirm Ratatosk is polling the folder where the reply landed
+- confirm Autotask is polling the folder where the reply landed
 
 ## Structured command emails
 
-Structured command emails let you control Ratatosk without opening the local dashboard.
+Structured command emails let you control Autotask without opening the local dashboard.
 
 ### Requirements
 
-Ratatosk accepts a command email only when all of these are true:
+Autotask accepts a command email only when all of these are true:
 
 1. `email_command_intake_enabled: true`
 2. the sender is allowlisted by `email_command_allowed_senders` (or falls back to `smtp_to` when that list is blank)
@@ -89,7 +89,7 @@ Current structured email commands are:
 | `start <WI> [--task <seq>]` | Queue and launch immediately |
 | `resume <WI> [--task <seq>]` | Resume a paused worker |
 | `retry <WI> [--task <seq>]` | Retry a failed worker |
-| `cleanup <WI> [--task <seq>]` | Remove the job from Ratatosk state and keep the workspace |
+| `cleanup <WI> [--task <seq>]` | Remove the job from Autotask state and keep the workspace |
 | `reply <WI> <message>` | Answer a worker waiting for input |
 | `answer <WI> <message>` | Alias for `reply` |
 | `notes <WI> --task <seq>` | Read ediProd task notes; reply contains the current notes |
@@ -112,7 +112,7 @@ Use the dashboard command bar for those.
 
 Subject:
 ~~~text
-Ratatosk Command: setnotes WI00975129 --task 423
+Autotask Command: setnotes WI00975129 --task 423
 ~~~
 
 Body (all lines become the note content):
@@ -127,7 +127,7 @@ Still part of the note after the blank line
 
 Subject:
 ~~~text
-Ratatosk Command
+Autotask Command
 ~~~
 
 Body:
@@ -146,7 +146,7 @@ In both cases blank lines and internal whitespace within the content are preserv
 Subject:
 
 ~~~text
-Ratatosk Command
+Autotask Command
 ~~~
 
 Body first line examples:
@@ -167,20 +167,20 @@ notes WI00975129 --task 423
 
 For `setnotes`, see the multi-line format above.
 
-If `email_command_send_replies: true`, Ratatosk replies with a success or failure result.
+If `email_command_send_replies: true`, Autotask replies with a success or failure result.
 
 ## What command emails actually do
 
 - `start` launches a worker immediately
 - `resume` relaunches a paused worker from its retained workspace
 - `retry` relaunches a failed worker
-- `cleanup` removes the job record from Ratatosk state and leaves the workspace intact
+- `cleanup` removes the job record from Autotask state and leaves the workspace intact
 
 Because workers launch in Windows Terminal tabs, the machine still needs to be awake and logged in.
 
 ## Outbound email notifications
 
-Ratatosk can send HTML-formatted email for:
+Autotask can send HTML-formatted email for:
 
 - task started
 - task completed

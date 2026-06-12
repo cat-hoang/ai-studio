@@ -1,10 +1,10 @@
-# Ratatosk Orchestrator
+﻿# Autotask Orchestrator
 
 Multi-agent task orchestrator for software development work items.
 
 ## Repository Role
 
-This directory contains the shared Ratatosk orchestration core plus CLI-specific adapters.
+This directory contains the shared Autotask orchestration core plus CLI-specific adapters.
 
 ## Shared Core
 
@@ -13,7 +13,7 @@ This directory contains the shared Ratatosk orchestration core plus CLI-specific
 - `dashboard/`
 - `workspaces/`
 - `commands/` playbooks
-- `tools/launch-ratatosk-worker.ps1`
+- `tools/launch-autotask-worker.ps1`
 
 ## Claude Adapter
 
@@ -25,7 +25,7 @@ This directory contains the shared Ratatosk orchestration core plus CLI-specific
 
 - `plugin.json`
 - `AGENTS.md`
-- `tools/invoke-ratatosk-copilot.ps1`
+- `tools/invoke-autotask-copilot.ps1`
 - `worker_cli: copilot` in `config.local.yaml`
 
 ## Key Paths
@@ -44,10 +44,10 @@ The `temp/` folder is gitignored and will never be committed.
 
 ## Shared Commands
 
-- `/ratatosk-start` — Fetch tasks, select, spawn worker tabs
-- `/ratatosk-status` — Show current orchestrator state
-- `/ratatosk-queue` — Add a task to the waiting queue
-- `/ratatosk-wrapup` — End-of-day: verify PRs, save context, cleanup, summary
+- `/autotask-start` — Fetch tasks, select, spawn worker tabs
+- `/autotask-status` — Show current orchestrator state
+- `/autotask-queue` — Add a task to the waiting queue
+- `/autotask-wrapup` — End-of-day: verify PRs, save context, cleanup, summary
 
 ## Agents
 
@@ -55,7 +55,7 @@ The `temp/` folder is gitignored and will never be committed.
 
 ## Autonomous Operation
 
-Worker tabs are launched through `tools\launch-ratatosk-worker.ps1`, which selects `claude` or `copilot` based on `worker_cli`. Claude workers still run with `--dangerously-skip-permissions`; Copilot workers use `copilot -i` with `--plugin-dir .`, `--allow-all`, and `--no-ask-user`.
+Worker tabs are launched through `tools\launch-autotask-worker.ps1`, which selects `claude` or `copilot` based on `worker_cli`. Claude workers still run with `--dangerously-skip-permissions`; Copilot workers use `copilot -i` with `--plugin-dir .`, `--allow-all`, and `--no-ask-user`.
 
 ## Session Memory (Claude Code)
 
@@ -69,8 +69,8 @@ Claude Code automatically loads a persistent memory index from:
 
 | Repo path | Encoded project path |
 |-----------|---------------------|
-| `C:\BS\ratatosk` | `C--BS-ratatosk` |
-| `D:\work\ratatosk` | `D--work-ratatosk` |
+| `C:\BS\autotask` | `C--BS-autotask` |
+| `D:\work\autotask` | `D--work-autotask` |
 
 Full path on Windows: `C:\Users\{USERNAME}\.claude\projects\{encoded}\memory\`
 

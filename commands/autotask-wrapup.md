@@ -1,14 +1,14 @@
----
+﻿---
 description: "End-of-day wrapup - verify PRs, save context, pause work safely, send summary"
 ---
 
-# Ratatosk Wrapup
+# Autotask Wrapup
 
 End-of-day procedure: verify PRs, save in-progress work, pause work safely, and send a daily summary.
 
 ## Step 1: Read State
 
-Read `temp/state.json`. If the file does not exist or has no workers, report "No Ratatosk state found. Nothing to wrap up." and stop.
+Read `temp/state.json`. If the file does not exist or has no workers, report "No Autotask state found. Nothing to wrap up." and stop.
 
 ## Step 2: Process Workers by Status
 

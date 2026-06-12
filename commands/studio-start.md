@@ -1,14 +1,14 @@
----
+﻿---
 description: "Studio orchestrator — polls issues, runs the full agent pipeline (architect → developer(s) → tester → reviewer)"
 ---
 
 # Studio Start
 
-You are the Ratatosk studio orchestrator. You coordinate the full multi-agent pipeline for one or more issues. Follow these steps precisely.
+You are the Autotask studio orchestrator. You coordinate the full multi-agent pipeline for one or more issues. Follow these steps precisely.
 
 > **Environment**: This orchestrator runs on **Windows**. Use **PowerShell** (`pwsh`) for all commands. Use backslash `\` as the path separator. Never use bash, sh, or Linux-style syntax.
 
-> **Solo mode**: If `studio.enabled` is `false` in config, this command is unavailable. Fall back to `/ratatosk-start` for the single-worker pipeline.
+> **Solo mode**: If `studio.enabled` is `false` in config, this command is unavailable. Fall back to `/autotask-start` for the single-worker pipeline.
 
 ## Autopilot Mode (Copilot CLI)
 
@@ -23,11 +23,11 @@ When the active host is **Copilot CLI**, engage autopilot mode:
 
 ## Step 1: Connectivity Preflight
 
-Follow the same connectivity check as `/ratatosk-start` Step 1. Verify the configured issue source is reachable.
+Follow the same connectivity check as `/autotask-start` Step 1. Verify the configured issue source is reachable.
 
 ## Step 2: Worker CLI Preflight
 
-Follow the same preflight as `/ratatosk-start` Step 2. Read `worker_cli` from `config.local.yaml`. Also run `tools\get-ratatosk-system-health.ps1`. Stop on `blocked`, warn on `degraded`.
+Follow the same preflight as `/autotask-start` Step 2. Read `worker_cli` from `config.local.yaml`. Also run `tools\get-autotask-system-health.ps1`. Stop on `blocked`, warn on `degraded`.
 
 ## Step 3: Read Configuration
 
@@ -45,18 +45,18 @@ If `studio.enabled` is `false`, print:
 ```
 Studio mode is disabled (studio.enabled = false in config.yaml).
 To enable: set studio.enabled to true and re-run /studio-start.
-Use /ratatosk-start for solo-worker mode.
+Use /autotask-start for solo-worker mode.
 ```
 
 Then stop.
 
 ## Step 4: Fetch Issues
 
-Run `tools\get-ratatosk-startable-jobs.ps1`. Parse the returned `startableJobs` JSON array.
+Run `tools\get-autotask-startable-jobs.ps1`. Parse the returned `startableJobs` JSON array.
 
 ## Step 5: Parse, Deduplicate, Score, Sort
 
-Same logic as `/ratatosk-start` Step 5. Score and sort issues for optimal batching.
+Same logic as `/autotask-start` Step 5. Score and sort issues for optimal batching.
 
 ## Step 6: Load Waiting Queue
 
@@ -114,7 +114,7 @@ Initialize `workspaces\{issueId}\studio\handoff.json`:
 
 ### 9b. Determine Repo Selection
 
-Same as `/ratatosk-start` Step 9b. Infer repo group from labels/title; present a selection prompt; wait for user input.
+Same as `/autotask-start` Step 9b. Infer repo group from labels/title; present a selection prompt; wait for user input.
 
 ### 9c. Update state.json
 
@@ -184,7 +184,7 @@ Gates pause the pipeline for human approval. When a gate fires (e.g. `post-desig
 1. The architect agent sets `studioTeam.activeAgent = "gate:post-design"` in `state.json`.
 2. The dashboard displays a **Approve** button on the issue card.
 3. The user approves via dashboard, Teams reply, email reply, or the `studio-approve {issueId}` command.
-4. `invoke-ratatosk-command.ps1` processes the `approve` command:
+4. `invoke-autotask-command.ps1` processes the `approve` command:
    - Updates `handoff.json`: sets `gate.name`, `gate.status = "approved"`, `gate.approvedBy`, `gate.approvedAt`
    - Updates `state.json`: sets `studioTeam.activeAgent = "developer"`
    - Re-invokes `launch-studio-team.ps1 -Stage developer` to spawn the developer tab

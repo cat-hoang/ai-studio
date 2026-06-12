@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Launches the appropriate studio agent tab for a given stage of the Ratatosk studio pipeline.
+    Launches the appropriate studio agent tab for a given stage of the Autotask studio pipeline.
 
 .DESCRIPTION
     Spawns a Windows Terminal tab running the correct agent CLI (architect, developer, tester, or reviewer)
@@ -16,18 +16,18 @@
 .EXAMPLE
     # Launch architect for a new studio session
     .\launch-studio-team.ps1 -Cli auto -IssueId GH-42 -Title "Add dark mode" `
-        -WorkspacePath "C:\git\ratatosk\workspaces\GH-42" `
-        -ArtifactsPath "C:\git\ratatosk\workspaces\GH-42\studio" `
+        -WorkspacePath "C:\git\autotask\workspaces\GH-42" `
+        -ArtifactsPath "C:\git\autotask\workspaces\GH-42\studio" `
         -Repos '[{"name":"my-app","path":"C:\\git\\my-app","remoteName":"origin"}]' `
-        -BranchPrefix "feature/ratatosk" -Stage architect
+        -BranchPrefix "feature/autotask" -Stage architect
 
 .EXAMPLE
     # Advance to developer stage after post-design gate approval
     .\launch-studio-team.ps1 -Cli auto -IssueId GH-42 -Title "Add dark mode" `
-        -WorkspacePath "C:\git\ratatosk\workspaces\GH-42" `
-        -ArtifactsPath "C:\git\ratatosk\workspaces\GH-42\studio" `
+        -WorkspacePath "C:\git\autotask\workspaces\GH-42" `
+        -ArtifactsPath "C:\git\autotask\workspaces\GH-42\studio" `
         -Repos '[{"name":"my-app","path":"C:\\git\\my-app","remoteName":"origin"}]' `
-        -BranchPrefix "feature/ratatosk" -Stage developer
+        -BranchPrefix "feature/autotask" -Stage developer
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
@@ -73,10 +73,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$RatatoskRoot = Split-Path -Parent $PSScriptRoot
+$AutotaskRoot = Split-Path -Parent $PSScriptRoot
 
 # ---------------------------------------------------------------------------
-# Helper functions (shared patterns from launch-ratatosk-worker.ps1)
+# Helper functions (shared patterns from launch-autotask-worker.ps1)
 # ---------------------------------------------------------------------------
 
 function Get-FullPath {
@@ -141,26 +141,26 @@ function New-ArchitectPrompt {
         [string]$ReposVal,
         [string]$AutonomyModeVal,
         [bool]$PostDesignGateVal,
-        [string]$RatatoskRootVal
+        [string]$AutotaskRootVal
     )
 
     $gateFlag = if ($PostDesignGateVal) { 'true' } else { 'false' }
 
     return @"
-You are the Ratatosk Architect Agent for issue $IssueIdVal.
-Read your full instructions from ``$RatatoskRootVal\agents\architect.md``.
+You are the Autotask Architect Agent for issue $IssueIdVal.
+Read your full instructions from ``$AutotaskRootVal\agents\architect.md``.
 
 issueId: $IssueIdVal
 title: $TitleVal
 workspacePath: $WorkspacePathVal
-ratatoskRoot: $RatatoskRootVal
+autotaskRoot: $AutotaskRootVal
 artifactsPath: $ArtifactsPathVal
 repos: $ReposVal
 autonomyMode: $AutonomyModeVal
 postDesignGate: $gateFlag
 
 Keep the terminal tab title exactly as launched. Do not rename the tab.
-Publish live activity via ``$RatatoskRootVal\tools\set-ratatosk-worker-activity.ps1``.
+Publish live activity via ``$AutotaskRootVal\tools\set-autotask-worker-activity.ps1``.
 Begin work immediately.
 "@
 }
@@ -174,25 +174,25 @@ function New-DeveloperPrompt {
         [string]$ArtifactsPathVal,
         [string]$ReposVal,
         [string]$BranchPrefixVal,
-        [string]$RatatoskRootVal
+        [string]$AutotaskRootVal
     )
 
     return @"
-You are the Ratatosk Developer Agent for issue $IssueIdVal.
-Read your full instructions from ``$RatatoskRootVal\agents\developer.md``.
+You are the Autotask Developer Agent for issue $IssueIdVal.
+Read your full instructions from ``$AutotaskRootVal\agents\developer.md``.
 
 issueId: $IssueIdVal
 title: $TitleVal
 subTaskId: $SubTaskId
 workspacePath: $WorkspacePathVal
-ratatoskRoot: $RatatoskRootVal
+autotaskRoot: $AutotaskRootVal
 artifactsPath: $ArtifactsPathVal
 repos: $ReposVal
 branchPrefix: $BranchPrefixVal
 workspaceMode: clone
 
 Keep the terminal tab title exactly as launched. Do not rename the tab.
-Publish live activity via ``$RatatoskRootVal\tools\set-ratatosk-worker-activity.ps1``.
+Publish live activity via ``$AutotaskRootVal\tools\set-autotask-worker-activity.ps1``.
 Begin work immediately.
 "@
 }
@@ -204,22 +204,22 @@ function New-TesterPrompt {
         [string]$WorkspacePathVal,
         [string]$ArtifactsPathVal,
         [string]$ReposVal,
-        [string]$RatatoskRootVal
+        [string]$AutotaskRootVal
     )
 
     return @"
-You are the Ratatosk Tester Agent for issue $IssueIdVal.
-Read your full instructions from ``$RatatoskRootVal\agents\tester.md``.
+You are the Autotask Tester Agent for issue $IssueIdVal.
+Read your full instructions from ``$AutotaskRootVal\agents\tester.md``.
 
 issueId: $IssueIdVal
 title: $TitleVal
 workspacePath: $WorkspacePathVal
-ratatoskRoot: $RatatoskRootVal
+autotaskRoot: $AutotaskRootVal
 artifactsPath: $ArtifactsPathVal
 repos: $ReposVal
 
 Keep the terminal tab title exactly as launched. Do not rename the tab.
-Publish live activity via ``$RatatoskRootVal\tools\set-ratatosk-worker-activity.ps1``.
+Publish live activity via ``$AutotaskRootVal\tools\set-autotask-worker-activity.ps1``.
 Begin work immediately.
 "@
 }
@@ -231,26 +231,26 @@ function New-ReviewerPrompt {
         [string]$WorkspacePathVal,
         [string]$ArtifactsPathVal,
         [string]$ReposVal,
-        [string]$RatatoskRootVal,
+        [string]$AutotaskRootVal,
         [int]$ReviewCycleVal,
         [int]$MaxReviewCyclesVal
     )
 
     return @"
-You are the Ratatosk Reviewer Agent for issue $IssueIdVal.
-Read your full instructions from ``$RatatoskRootVal\agents\reviewer.md``.
+You are the Autotask Reviewer Agent for issue $IssueIdVal.
+Read your full instructions from ``$AutotaskRootVal\agents\reviewer.md``.
 
 issueId: $IssueIdVal
 title: $TitleVal
 workspacePath: $WorkspacePathVal
-ratatoskRoot: $RatatoskRootVal
+autotaskRoot: $AutotaskRootVal
 artifactsPath: $ArtifactsPathVal
 repos: $ReposVal
 reviewCycle: $ReviewCycleVal
 maxReviewCycles: $MaxReviewCyclesVal
 
 Keep the terminal tab title exactly as launched. Do not rename the tab.
-Publish live activity via ``$RatatoskRootVal\tools\set-ratatosk-worker-activity.ps1``.
+Publish live activity via ``$AutotaskRootVal\tools\set-autotask-worker-activity.ps1``.
 Begin work immediately.
 "@
 }
@@ -417,7 +417,7 @@ function Main {
                 -ReposVal         $Repos `
                 -AutonomyModeVal  $AutonomyMode `
                 -PostDesignGateVal $PostDesignGate.IsPresent `
-                -RatatoskRootVal  $RatatoskRoot
+                -AutotaskRootVal  $AutotaskRoot
 
             $promptFile = Join-Path $resolvedWorkspacePath '.studio-prompt-architect.md'
             [System.IO.File]::WriteAllText($promptFile, $promptContent, [System.Text.Encoding]::UTF8)
@@ -446,7 +446,7 @@ function Main {
                     -ArtifactsPathVal $resolvedArtifactsPath `
                     -ReposVal         $Repos `
                     -BranchPrefixVal  $BranchPrefix `
-                    -RatatoskRootVal  $RatatoskRoot
+                    -AutotaskRootVal  $AutotaskRoot
 
                 $safeSub    = $subTask -replace '[^a-zA-Z0-9\-]', '-'
                 $promptFile = Join-Path $resolvedWorkspacePath ".studio-prompt-developer-$safeSub.md"
@@ -471,7 +471,7 @@ function Main {
                 -WorkspacePathVal $resolvedWorkspacePath `
                 -ArtifactsPathVal $resolvedArtifactsPath `
                 -ReposVal         $Repos `
-                -RatatoskRootVal  $RatatoskRoot
+                -AutotaskRootVal  $AutotaskRoot
 
             $promptFile = Join-Path $resolvedWorkspacePath '.studio-prompt-tester.md'
             [System.IO.File]::WriteAllText($promptFile, $promptContent, [System.Text.Encoding]::UTF8)
@@ -494,7 +494,7 @@ function Main {
                 -WorkspacePathVal   $resolvedWorkspacePath `
                 -ArtifactsPathVal   $resolvedArtifactsPath `
                 -ReposVal           $Repos `
-                -RatatoskRootVal    $RatatoskRoot `
+                -AutotaskRootVal    $AutotaskRoot `
                 -ReviewCycleVal     $ReviewCycleNumber `
                 -MaxReviewCyclesVal $ReviewCycles
 

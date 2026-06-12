@@ -1,4 +1,4 @@
-[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
+﻿[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
     [string]$IssueId = '',
 
@@ -22,7 +22,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 
 # Auto-detect IssueId from workspace directory name if not provided
 if ([string]::IsNullOrWhiteSpace($IssueId)) {
@@ -48,7 +48,7 @@ function Get-UniqueStringArray {
     )
 }
 
-function Format-RatatoskDuration {
+function Format-AutotaskDuration {
     param(
         [object]$StartedAt,
         [object]$FinishedAt
@@ -97,7 +97,7 @@ function Format-RatatoskDuration {
     return ('{0}m' -f [math]::Floor($span.TotalMinutes))
 }
 
-function Set-OrAddRatatoskJob {
+function Set-OrAddAutotaskJob {
     param(
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
@@ -107,13 +107,13 @@ function Set-OrAddRatatoskJob {
         [psobject]$Job
     )
 
-    $jobKey = Get-RatatoskJobObjectKey -Job $Job
-    $remaining = @($Items | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $jobKey })
+    $jobKey = Get-AutotaskJobObjectKey -Job $Job
+    $remaining = @($Items | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $jobKey })
     return @($remaining + $Job)
 }
 
-$state = Read-RatatoskState
-$worker = Get-RatatoskWorker -State $state -IssueId $IssueId
+$state = Read-AutotaskState
+$worker = Get-AutotaskWorker -State $state -IssueId $IssueId
 if (-not $worker) {
     throw "Worker not found for issue $IssueId"
 }
@@ -129,8 +129,8 @@ $effectiveWorkspacePath = if (-not [string]::IsNullOrWhiteSpace($WorkspacePath))
 if ([string]::IsNullOrWhiteSpace($effectiveWorkspacePath)) {
     throw "Workspace path not available for issue $IssueId"
 }
-$resolvedWorkspacePath = Resolve-RatatoskPath -Path $effectiveWorkspacePath
-$relativeWorkspacePath = ConvertTo-RatatoskRelativePath -Path $resolvedWorkspacePath
+$resolvedWorkspacePath = Resolve-AutotaskPath -Path $effectiveWorkspacePath
+$relativeWorkspacePath = ConvertTo-AutotaskRelativePath -Path $resolvedWorkspacePath
 
 $effectivePrUrls = Get-UniqueStringArray -Values @(@($PrUrls) + @(if ($worker.prUrls) { @($worker.prUrls) } else { @() }) + @(if ($worker.prs) { @($worker.prs) } else { @() }))
 $effectiveLogs = Get-UniqueStringArray -Values @(
@@ -157,16 +157,16 @@ $workerStartedAtIso = if ($null -eq $rawWorkerStartedAt -or [string]::IsNullOrWh
 }
 
 $effectiveStartedAt = if (-not [string]::IsNullOrWhiteSpace($StartedAt)) { $StartedAt } else { $workerStartedAtIso }
-$duration = Format-RatatoskDuration -StartedAt $effectiveStartedAt -FinishedAt $Timestamp
-$artifactUsage = Get-ObjectPropertyValue -Object $worker -Name 'artifactUsage' -Default (New-RatatoskArtifactUsage -Branch ([string]$worker.branch) -Timestamp ([string]$worker.startedAt))
-$buildPlan = Get-ObjectPropertyValue -Object $worker -Name 'buildPlan' -Default (New-RatatoskBuildPlan -Timestamp ([string]$worker.startedAt))
-$buildFailure = Get-ObjectPropertyValue -Object $worker -Name 'buildFailure' -Default (New-RatatoskBuildFailure)
+$duration = Format-AutotaskDuration -StartedAt $effectiveStartedAt -FinishedAt $Timestamp
+$artifactUsage = Get-ObjectPropertyValue -Object $worker -Name 'artifactUsage' -Default (New-AutotaskArtifactUsage -Branch ([string]$worker.branch) -Timestamp ([string]$worker.startedAt))
+$buildPlan = Get-ObjectPropertyValue -Object $worker -Name 'buildPlan' -Default (New-AutotaskBuildPlan -Timestamp ([string]$worker.startedAt))
+$buildFailure = Get-ObjectPropertyValue -Object $worker -Name 'buildFailure' -Default (New-AutotaskBuildFailure)
 
 if ($Status -eq 'failed') {
     $existingClassification = [string](Get-ObjectPropertyValue -Object $buildFailure -Name 'classification' -Default 'none')
     if ([string]::IsNullOrWhiteSpace($existingClassification) -or $existingClassification -eq 'none') {
         $failureText = (Get-UniqueStringArray -Values @($ErrorMessage, $Summary, $effectiveLogs)) -join [Environment]::NewLine
-        $buildFailure = Get-RatatoskBuildFailureAssessment `
+        $buildFailure = Get-AutotaskBuildFailureAssessment `
             -FailureText $failureText `
             -Phase ([string]$worker.phase) `
             -TargetProjects @((Get-ObjectPropertyValue -Object $buildPlan -Name 'targetProjects' -Default @())) `
@@ -201,43 +201,43 @@ if (-not $PSCmdlet.ShouldProcess($IssueId, "Finalize worker as $Status")) {
     return
 }
 
-$reportPath = Save-RatatoskWorkspaceArtifact -WorkspacePath $resolvedWorkspacePath -FileName 'final-report.json' -Content $report
+$reportPath = Save-AutotaskWorkspaceArtifact -WorkspacePath $resolvedWorkspacePath -FileName 'final-report.json' -Content $report
 
-Set-RatatoskProperty -Object $worker -Name 'status' -Value $Status
-Set-RatatoskProperty -Object $worker -Name 'phase' -Value $finishedPhase
-Set-RatatoskProperty -Object $worker -Name 'prUrls' -Value $effectivePrUrls
-Set-RatatoskProperty -Object $worker -Name 'prs' -Value $effectivePrUrls
-Set-RatatoskProperty -Object $worker -Name 'logs' -Value $effectiveLogs
-Set-RatatoskProperty -Object $worker -Name 'error' -Value $ErrorMessage
-Set-RatatoskProperty -Object $worker -Name 'artifactUsage' -Value $artifactUsage
-Set-RatatoskProperty -Object $worker -Name 'buildPlan' -Value $buildPlan
-Set-RatatoskProperty -Object $worker -Name 'buildFailure' -Value $buildFailure
-Set-RatatoskProperty -Object $worker -Name 'activityStatus' -Value $activityStatus
-Set-RatatoskProperty -Object $worker -Name 'activityMessage' -Value 'final report captured'
-Set-RatatoskProperty -Object $worker -Name 'workspacePath' -Value $relativeWorkspacePath
-Set-RatatoskProperty -Object $worker -Name 'finalReportPath' -Value $reportPath
-Set-RatatoskProperty -Object $worker -Name 'finalReportSummary' -Value $Summary.Trim()
-Set-RatatoskProperty -Object $worker -Name 'finalReportedAt' -Value $Timestamp
-Set-RatatoskWorkerHeartbeat -Worker $worker -Timestamp $Timestamp
+Set-AutotaskProperty -Object $worker -Name 'status' -Value $Status
+Set-AutotaskProperty -Object $worker -Name 'phase' -Value $finishedPhase
+Set-AutotaskProperty -Object $worker -Name 'prUrls' -Value $effectivePrUrls
+Set-AutotaskProperty -Object $worker -Name 'prs' -Value $effectivePrUrls
+Set-AutotaskProperty -Object $worker -Name 'logs' -Value $effectiveLogs
+Set-AutotaskProperty -Object $worker -Name 'error' -Value $ErrorMessage
+Set-AutotaskProperty -Object $worker -Name 'artifactUsage' -Value $artifactUsage
+Set-AutotaskProperty -Object $worker -Name 'buildPlan' -Value $buildPlan
+Set-AutotaskProperty -Object $worker -Name 'buildFailure' -Value $buildFailure
+Set-AutotaskProperty -Object $worker -Name 'activityStatus' -Value $activityStatus
+Set-AutotaskProperty -Object $worker -Name 'activityMessage' -Value 'final report captured'
+Set-AutotaskProperty -Object $worker -Name 'workspacePath' -Value $relativeWorkspacePath
+Set-AutotaskProperty -Object $worker -Name 'finalReportPath' -Value $reportPath
+Set-AutotaskProperty -Object $worker -Name 'finalReportSummary' -Value $Summary.Trim()
+Set-AutotaskProperty -Object $worker -Name 'finalReportedAt' -Value $Timestamp
+Set-AutotaskWorkerHeartbeat -Worker $worker -Timestamp $Timestamp
 
 if ($Status -eq 'done') {
-    Set-RatatoskProperty -Object $worker -Name 'completedAt' -Value $Timestamp
-    $workerKey = Get-RatatoskJobObjectKey -Job $worker
-    $state.workers = @($state.workers | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey })
-    $state.failedJobs = @($state.failedJobs | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey })
-    $state.completedJobs = Set-OrAddRatatoskJob -Items $state.completedJobs -Job $worker
+    Set-AutotaskProperty -Object $worker -Name 'completedAt' -Value $Timestamp
+    $workerKey = Get-AutotaskJobObjectKey -Job $worker
+    $state.workers = @($state.workers | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey })
+    $state.failedJobs = @($state.failedJobs | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey })
+    $state.completedJobs = Set-OrAddAutotaskJob -Items $state.completedJobs -Job $worker
 } else {
-    Set-RatatoskProperty -Object $worker -Name 'failedAt' -Value $Timestamp
-    Set-RatatoskProperty -Object $worker -Name 'retryCount' -Value $(
+    Set-AutotaskProperty -Object $worker -Name 'failedAt' -Value $Timestamp
+    Set-AutotaskProperty -Object $worker -Name 'retryCount' -Value $(
         if ($null -ne $worker.retryCount -and "$($worker.retryCount)".Trim()) { [int]$worker.retryCount } else { 0 }
     )
-    $workerKey = Get-RatatoskJobObjectKey -Job $worker
-    $state.workers = @($state.workers | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey })
-    $state.completedJobs = @($state.completedJobs | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $workerKey })
-    $state.failedJobs = Set-OrAddRatatoskJob -Items $state.failedJobs -Job $worker
+    $workerKey = Get-AutotaskJobObjectKey -Job $worker
+    $state.workers = @($state.workers | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey })
+    $state.completedJobs = @($state.completedJobs | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $workerKey })
+    $state.failedJobs = Set-OrAddAutotaskJob -Items $state.failedJobs -Job $worker
 }
 
-Write-RatatoskState -State $state
+Write-AutotaskState -State $state
 
 $toolsDir = Split-Path -Parent $PSCommandPath
 $teamsScript = Join-Path $toolsDir 'send-teams-notification.ps1'
@@ -271,13 +271,13 @@ if ($Status -eq 'done') {
 
     # Record last email result for auditing in state.json (best-effort)
     try {
-        $jobKey = Get-RatatoskJobObjectKey -Job $worker
+        $jobKey = Get-AutotaskJobObjectKey -Job $worker
         $updated = $false
         if ($state.completedJobs) {
             $cj = @($state.completedJobs)
             for ($i = 0; $i -lt $cj.Count; $i++) {
-                if ((Get-RatatoskJobObjectKey -Job $cj[$i]) -eq $jobKey) {
-                    Set-RatatoskProperty -Object $cj[$i] -Name 'lastEmailResult' -Value $emailResult
+                if ((Get-AutotaskJobObjectKey -Job $cj[$i]) -eq $jobKey) {
+                    Set-AutotaskProperty -Object $cj[$i] -Name 'lastEmailResult' -Value $emailResult
                     $state.completedJobs = @($cj)
                     $updated = $true
                     break
@@ -287,15 +287,15 @@ if ($Status -eq 'done') {
         if (-not $updated -and $state.failedJobs) {
             $fj = @($state.failedJobs)
             for ($i = 0; $i -lt $fj.Count; $i++) {
-                if ((Get-RatatoskJobObjectKey -Job $fj[$i]) -eq $jobKey) {
-                    Set-RatatoskProperty -Object $fj[$i] -Name 'lastEmailResult' -Value $emailResult
+                if ((Get-AutotaskJobObjectKey -Job $fj[$i]) -eq $jobKey) {
+                    Set-AutotaskProperty -Object $fj[$i] -Name 'lastEmailResult' -Value $emailResult
                     $state.failedJobs = @($fj)
                     $updated = $true
                     break
                 }
             }
         }
-        if ($updated) { Write-RatatoskState -State $state }
+        if ($updated) { Write-AutotaskState -State $state }
     } catch {
         Write-Warning "finalize: could not record email result to state: $_"
     }
@@ -312,13 +312,13 @@ if ($Status -eq 'done') {
 
     # Record last email result for auditing in state.json (best-effort)
     try {
-        $jobKey = Get-RatatoskJobObjectKey -Job $worker
+        $jobKey = Get-AutotaskJobObjectKey -Job $worker
         $updated = $false
         if ($state.completedJobs) {
             $cj = @($state.completedJobs)
             for ($i = 0; $i -lt $cj.Count; $i++) {
-                if ((Get-RatatoskJobObjectKey -Job $cj[$i]) -eq $jobKey) {
-                    Set-RatatoskProperty -Object $cj[$i] -Name 'lastEmailResult' -Value $emailResult
+                if ((Get-AutotaskJobObjectKey -Job $cj[$i]) -eq $jobKey) {
+                    Set-AutotaskProperty -Object $cj[$i] -Name 'lastEmailResult' -Value $emailResult
                     $state.completedJobs = @($cj)
                     $updated = $true
                     break
@@ -328,15 +328,15 @@ if ($Status -eq 'done') {
         if (-not $updated -and $state.failedJobs) {
             $fj = @($state.failedJobs)
             for ($i = 0; $i -lt $fj.Count; $i++) {
-                if ((Get-RatatoskJobObjectKey -Job $fj[$i]) -eq $jobKey) {
-                    Set-RatatoskProperty -Object $fj[$i] -Name 'lastEmailResult' -Value $emailResult
+                if ((Get-AutotaskJobObjectKey -Job $fj[$i]) -eq $jobKey) {
+                    Set-AutotaskProperty -Object $fj[$i] -Name 'lastEmailResult' -Value $emailResult
                     $state.failedJobs = @($fj)
                     $updated = $true
                     break
                 }
             }
         }
-        if ($updated) { Write-RatatoskState -State $state }
+        if ($updated) { Write-AutotaskState -State $state }
     } catch {
         Write-Warning "finalize: could not record email result to state: $_"
     }

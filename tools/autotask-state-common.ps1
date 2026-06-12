@@ -1,20 +1,20 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:RatatoskRoot = Split-Path -Parent $PSScriptRoot
-$script:RatatoskStatePath = Join-Path $script:RatatoskRoot 'temp\state.json'
+$script:AutotaskRoot = Split-Path -Parent $PSScriptRoot
+$script:AutotaskStatePath = Join-Path $script:AutotaskRoot 'temp\state.json'
 $script:Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-$script:RatatoskBackupRetentionCount = 50
+$script:AutotaskBackupRetentionCount = 50
 
-function Get-RatatoskRootPath {
-    return $script:RatatoskRoot
+function Get-AutotaskRootPath {
+    return $script:AutotaskRoot
 }
 
-function Get-RatatoskStatePath {
-    return $script:RatatoskStatePath
+function Get-AutotaskStatePath {
+    return $script:AutotaskStatePath
 }
 
-function Resolve-RatatoskPath {
+function Resolve-AutotaskPath {
     param(
         [Parameter(Mandatory)]
         [string]$Path
@@ -28,10 +28,10 @@ function Resolve-RatatoskPath {
         return [System.IO.Path]::GetFullPath($Path)
     }
 
-    return [System.IO.Path]::GetFullPath((Join-Path $script:RatatoskRoot $Path))
+    return [System.IO.Path]::GetFullPath((Join-Path $script:AutotaskRoot $Path))
 }
 
-function ConvertTo-RatatoskRelativePath {
+function ConvertTo-AutotaskRelativePath {
     param(
         [Parameter(Mandatory)]
         [string]$Path
@@ -41,8 +41,8 @@ function ConvertTo-RatatoskRelativePath {
         return ''
     }
 
-    $fullPath = Resolve-RatatoskPath -Path $Path
-    $rootWithSeparator = $script:RatatoskRoot.TrimEnd('\') + '\'
+    $fullPath = Resolve-AutotaskPath -Path $Path
+    $rootWithSeparator = $script:AutotaskRoot.TrimEnd('\') + '\'
     if ($fullPath.StartsWith($rootWithSeparator, [System.StringComparison]::OrdinalIgnoreCase)) {
         return $fullPath.Substring($rootWithSeparator.Length)
     }
@@ -80,7 +80,7 @@ function Get-ObjectPropertyValue {
     return $Default
 }
 
-function Get-RatatoskUniqueStringArray {
+function Get-AutotaskUniqueStringArray {
     param(
         [AllowEmptyCollection()]
         [object[]]$Values = @()
@@ -112,7 +112,7 @@ function Get-RatatoskUniqueStringArray {
     return @($items)
 }
 
-function New-RatatoskArtifactUsage {
+function New-AutotaskArtifactUsage {
     param(
         [string]$Branch = '',
         [string]$Timestamp = ''
@@ -137,7 +137,7 @@ function New-RatatoskArtifactUsage {
     }
 }
 
-function New-RatatoskBuildPlan {
+function New-AutotaskBuildPlan {
     param(
         [string]$Timestamp = ''
     )
@@ -159,7 +159,7 @@ function New-RatatoskBuildPlan {
     }
 }
 
-function New-RatatoskBuildFailure {
+function New-AutotaskBuildFailure {
     param(
         [string]$Timestamp = ''
     )
@@ -176,7 +176,7 @@ function New-RatatoskBuildFailure {
     }
 }
 
-function Get-RatatoskNormalizedNameSet {
+function Get-AutotaskNormalizedNameSet {
     param(
         [AllowEmptyCollection()]
         [string[]]$Values = @(),
@@ -215,7 +215,7 @@ function Get-RatatoskNormalizedNameSet {
     return @($names)
 }
 
-function Get-RatatoskBuildFailureAssessment {
+function Get-AutotaskBuildFailureAssessment {
     param(
         [string]$FailureText = '',
         [string]$Phase = '',
@@ -231,10 +231,10 @@ function Get-RatatoskBuildFailureAssessment {
 
     $matchedSignals = New-Object System.Collections.Generic.List[string]
     $normalizedFailureText = [string]$FailureText
-    $normalizedTargetProjects = @(Get-RatatoskNormalizedNameSet -Values $TargetProjects -StripExtension)
-    $normalizedFailedProjects = @(Get-RatatoskNormalizedNameSet -Values $FailedProjects -StripExtension)
-    $normalizedTargetTests = @(Get-RatatoskNormalizedNameSet -Values $TargetTests)
-    $normalizedFailedTests = @(Get-RatatoskNormalizedNameSet -Values $FailedTests)
+    $normalizedTargetProjects = @(Get-AutotaskNormalizedNameSet -Values $TargetProjects -StripExtension)
+    $normalizedFailedProjects = @(Get-AutotaskNormalizedNameSet -Values $FailedProjects -StripExtension)
+    $normalizedTargetTests = @(Get-AutotaskNormalizedNameSet -Values $TargetTests)
+    $normalizedFailedTests = @(Get-AutotaskNormalizedNameSet -Values $FailedTests)
 
     $overlapProjects = @($normalizedFailedProjects | Where-Object { $normalizedTargetProjects -contains $_ })
     $overlapTests = @($normalizedFailedTests | Where-Object { $normalizedTargetTests -contains $_ })
@@ -378,9 +378,9 @@ function Get-RatatoskBuildFailureAssessment {
     }
 }
 
-function New-RatatoskEmptyState {
+function New-AutotaskEmptyState {
     return [PSCustomObject]@{
-        orchestrator = 'ratatosk'
+        orchestrator = 'autotask'
         version = '1.0.0'
         date = (Get-Date -Format 'yyyy-MM-dd')
         waitingQueue = @()
@@ -390,25 +390,25 @@ function New-RatatoskEmptyState {
     }
 }
 
-function Read-RatatoskState {
-    if (-not (Test-Path -LiteralPath $script:RatatoskStatePath)) {
-        return New-RatatoskEmptyState
+function Read-AutotaskState {
+    if (-not (Test-Path -LiteralPath $script:AutotaskStatePath)) {
+        return New-AutotaskEmptyState
     }
 
-    $state = Get-Content -LiteralPath $script:RatatoskStatePath -Raw | ConvertFrom-Json
-    if (-not $state.waitingQueue) { Set-RatatoskProperty -Object $state -Name 'waitingQueue' -Value @() }
-    if (-not $state.workers) { Set-RatatoskProperty -Object $state -Name 'workers' -Value @() }
-    if (-not $state.completedJobs) { Set-RatatoskProperty -Object $state -Name 'completedJobs' -Value @() }
-    if (-not $state.failedJobs) { Set-RatatoskProperty -Object $state -Name 'failedJobs' -Value @() }
+    $state = Get-Content -LiteralPath $script:AutotaskStatePath -Raw | ConvertFrom-Json
+    if (-not $state.waitingQueue) { Set-AutotaskProperty -Object $state -Name 'waitingQueue' -Value @() }
+    if (-not $state.workers) { Set-AutotaskProperty -Object $state -Name 'workers' -Value @() }
+    if (-not $state.completedJobs) { Set-AutotaskProperty -Object $state -Name 'completedJobs' -Value @() }
+    if (-not $state.failedJobs) { Set-AutotaskProperty -Object $state -Name 'failedJobs' -Value @() }
     return $state
 }
 
-function Invoke-RatatoskBackupRetention {
+function Invoke-AutotaskBackupRetention {
     param(
         [Parameter(Mandatory)]
         [string]$TempDir,
 
-        [int]$KeepCount = $script:RatatoskBackupRetentionCount
+        [int]$KeepCount = $script:AutotaskBackupRetentionCount
     )
 
     if ($KeepCount -lt 1) { return }
@@ -419,32 +419,32 @@ function Invoke-RatatoskBackupRetention {
         if ($backups.Count -le $KeepCount) { return }
         $backups | Select-Object -Skip $KeepCount | Remove-Item -Force -ErrorAction SilentlyContinue
     } catch {
-        Write-Verbose "Invoke-RatatoskBackupRetention: pruning failed: $_"
+        Write-Verbose "Invoke-AutotaskBackupRetention: pruning failed: $_"
     }
 }
 
-function Write-RatatoskState {
+function Write-AutotaskState {
     param(
         [Parameter(Mandatory)]
         [psobject]$State
     )
 
     # Ensure temp dir exists for safe backups
-    $tempDir = Join-Path $script:RatatoskRoot 'temp'
+    $tempDir = Join-Path $script:AutotaskRoot 'temp'
     if (-not (Test-Path -LiteralPath $tempDir)) { New-Item -ItemType Directory -Path $tempDir -Force | Out-Null }
 
     # Backup current state.json into temp as state.json.bak.YYYYMMDDHHmmss if it exists
     try {
-        if (Test-Path -LiteralPath $script:RatatoskStatePath) {
+        if (Test-Path -LiteralPath $script:AutotaskStatePath) {
             $ts = (Get-Date).ToString('yyyyMMddHHmmss')
             $backupName = "state.json.bak.$ts"
             $backupPath = Join-Path $tempDir $backupName
-            Copy-Item -LiteralPath $script:RatatoskStatePath -Destination $backupPath -Force
-            Invoke-RatatoskBackupRetention -TempDir $tempDir
+            Copy-Item -LiteralPath $script:AutotaskStatePath -Destination $backupPath -Force
+            Invoke-AutotaskBackupRetention -TempDir $tempDir
         }
     } catch {
         # Best-effort: do not fail writes if backup fails
-        Write-Verbose "Write-RatatoskState: backup to temp failed: $_"
+        Write-Verbose "Write-AutotaskState: backup to temp failed: $_"
     }
 
     # Merge with fresh disk state to avoid clobbering concurrent changes.
@@ -452,8 +452,8 @@ function Write-RatatoskState {
     # but non-workers buckets (completedJobs, failedJobs, waitingQueue) take the
     # disk version to preserve cleanup/complete mutations from other writers.
     try {
-        if (Test-Path -LiteralPath $script:RatatoskStatePath) {
-            $diskContent = [System.IO.File]::ReadAllText($script:RatatoskStatePath, $script:Utf8NoBom)
+        if (Test-Path -LiteralPath $script:AutotaskStatePath) {
+            $diskContent = [System.IO.File]::ReadAllText($script:AutotaskStatePath, $script:Utf8NoBom)
             if (-not [string]::IsNullOrWhiteSpace($diskContent)) {
                 $diskContent = $diskContent -replace '^\xEF\xBB\xBF', ''
                 $diskState = $diskContent | ConvertFrom-Json -ErrorAction Stop
@@ -529,20 +529,20 @@ function Write-RatatoskState {
                 $State.workers = @($mergedWorkers)
                 foreach ($bucket in @('completedJobs', 'failedJobs', 'waitingQueue')) {
                     $diskBucket = @(Get-ObjectPropertyValue -Object $diskState -Name $bucket -Default @())
-                    Set-RatatoskProperty -Object $State -Name $bucket -Value $diskBucket
+                    Set-AutotaskProperty -Object $State -Name $bucket -Value $diskBucket
                 }
 
                 # Preserve non-bucket properties from disk that the caller might not have
                 foreach ($prop in $diskState.PSObject.Properties) {
                     if ($prop.Name -notin @('workers', 'completedJobs', 'failedJobs', 'waitingQueue') -and
                         -not $State.PSObject.Properties[$prop.Name]) {
-                        Set-RatatoskProperty -Object $State -Name $prop.Name -Value $prop.Value
+                        Set-AutotaskProperty -Object $State -Name $prop.Name -Value $prop.Value
                     }
                 }
             }
         }
     } catch {
-        Write-Verbose "Write-RatatoskState: merge with disk state failed (proceeding with caller state): $_"
+        Write-Verbose "Write-AutotaskState: merge with disk state failed (proceeding with caller state): $_"
     }
 
     $serializedState = ($State | ConvertTo-Json -Depth 20)
@@ -550,7 +550,7 @@ function Write-RatatoskState {
     for ($attempt = 1; $attempt -le 5; $attempt++) {
         try {
             [System.IO.File]::WriteAllText(
-                $script:RatatoskStatePath,
+                $script:AutotaskStatePath,
                 $serializedState,
                 $script:Utf8NoBom
             )
@@ -573,7 +573,7 @@ function Write-RatatoskState {
     throw $lastError
 }
 
-function Set-RatatoskProperty {
+function Set-AutotaskProperty {
     param(
         [Parameter(Mandatory)]
         [psobject]$Object,
@@ -591,7 +591,7 @@ function Set-RatatoskProperty {
     }
 }
 
-function Set-RatatoskWorkerHeartbeat {
+function Set-AutotaskWorkerHeartbeat {
     param(
         [Parameter(Mandatory)]
         [psobject]$Worker,
@@ -605,11 +605,11 @@ function Set-RatatoskWorkerHeartbeat {
         $Timestamp
     }
 
-    Set-RatatoskProperty -Object $Worker -Name 'lastHeartbeatAt' -Value $effectiveTimestamp
-    Set-RatatoskProperty -Object $Worker -Name 'lastUpdated' -Value $effectiveTimestamp
+    Set-AutotaskProperty -Object $Worker -Name 'lastHeartbeatAt' -Value $effectiveTimestamp
+    Set-AutotaskProperty -Object $Worker -Name 'lastUpdated' -Value $effectiveTimestamp
 }
 
-function Get-RatatoskTaskSequenceText {
+function Get-AutotaskTaskSequenceText {
     param(
         $Value
     )
@@ -626,14 +626,14 @@ function Get-RatatoskTaskSequenceText {
     return $text.Trim()
 }
 
-function Get-RatatoskJobKey {
+function Get-AutotaskJobKey {
     param(
         [string]$IssueId,
         $TaskSequence = $null
     )
 
     $resolvedIssueId = if ([string]::IsNullOrWhiteSpace($IssueId)) { '' } else { $IssueId.Trim().ToUpperInvariant() }
-    $resolvedTaskSequence = Get-RatatoskTaskSequenceText -Value $TaskSequence
+    $resolvedTaskSequence = Get-AutotaskTaskSequenceText -Value $TaskSequence
     if ([string]::IsNullOrWhiteSpace($resolvedTaskSequence)) {
         return $resolvedIssueId
     }
@@ -641,7 +641,7 @@ function Get-RatatoskJobKey {
     return ($resolvedIssueId + '::' + $resolvedTaskSequence)
 }
 
-function Get-RatatoskJobObjectKey {
+function Get-AutotaskJobObjectKey {
     param(
         [Parameter(Mandatory)]
         [object]$Job
@@ -651,12 +651,12 @@ function Get-RatatoskJobObjectKey {
     if ([string]::IsNullOrWhiteSpace($id)) {
         $id = [string](Get-ObjectPropertyValue -Object $Job -Name 'jobNumber' -Default '')
     }
-    return Get-RatatoskJobKey `
+    return Get-AutotaskJobKey `
         -IssueId $id `
         -TaskSequence (Get-ObjectPropertyValue -Object $Job -Name 'taskSequence' -Default '')
 }
 
-function Test-RatatoskJobMatch {
+function Test-AutotaskJobMatch {
     param(
         [Parameter(Mandatory)]
         [object]$Job,
@@ -675,16 +675,16 @@ function Test-RatatoskJobMatch {
         return $false
     }
 
-    $resolvedTaskSequence = Get-RatatoskTaskSequenceText -Value $TaskSequence
+    $resolvedTaskSequence = Get-AutotaskTaskSequenceText -Value $TaskSequence
     if ([string]::IsNullOrWhiteSpace($resolvedTaskSequence)) {
         return $true
     }
 
-    $jobTaskSequence = Get-RatatoskTaskSequenceText -Value (Get-ObjectPropertyValue -Object $Job -Name 'taskSequence' -Default '')
+    $jobTaskSequence = Get-AutotaskTaskSequenceText -Value (Get-ObjectPropertyValue -Object $Job -Name 'taskSequence' -Default '')
     return $jobTaskSequence -eq $resolvedTaskSequence
 }
 
-function Get-RatatoskWorker {
+function Get-AutotaskWorker {
     param(
         [Parameter(Mandatory)]
         [psobject]$State,
@@ -695,30 +695,30 @@ function Get-RatatoskWorker {
         $TaskSequence = $null
     )
 
-    return @($State.workers | Where-Object { Test-RatatoskJobMatch -Job $_ -IssueId $IssueId -TaskSequence $TaskSequence }) | Select-Object -First 1
+    return @($State.workers | Where-Object { Test-AutotaskJobMatch -Job $_ -IssueId $IssueId -TaskSequence $TaskSequence }) | Select-Object -First 1
 }
 
-function Ensure-RatatoskWorkspaceDirectory {
+function Ensure-AutotaskWorkspaceDirectory {
     param(
         [Parameter(Mandatory)]
         [string]$WorkspacePath
     )
 
-    $resolvedWorkspacePath = Resolve-RatatoskPath -Path $WorkspacePath
+    $resolvedWorkspacePath = Resolve-AutotaskPath -Path $WorkspacePath
 
     if (-not (Test-Path -LiteralPath $resolvedWorkspacePath)) {
         New-Item -ItemType Directory -Path $resolvedWorkspacePath -Force | Out-Null
     }
 
-    $ratatoskDir = Join-Path $resolvedWorkspacePath '.ratatosk'
-    if (-not (Test-Path -LiteralPath $ratatoskDir)) {
-        New-Item -ItemType Directory -Path $ratatoskDir -Force | Out-Null
+    $autotaskDir = Join-Path $resolvedWorkspacePath '.autotask'
+    if (-not (Test-Path -LiteralPath $autotaskDir)) {
+        New-Item -ItemType Directory -Path $autotaskDir -Force | Out-Null
     }
 
-    return $ratatoskDir
+    return $autotaskDir
 }
 
-function Save-RatatoskWorkspaceArtifact {
+function Save-AutotaskWorkspaceArtifact {
     param(
         [Parameter(Mandatory)]
         [string]$WorkspacePath,
@@ -730,12 +730,12 @@ function Save-RatatoskWorkspaceArtifact {
         $Content
     )
 
-    $ratatoskDir = Ensure-RatatoskWorkspaceDirectory -WorkspacePath $WorkspacePath
-    $artifactPath = Join-Path $ratatoskDir $FileName
+    $autotaskDir = Ensure-AutotaskWorkspaceDirectory -WorkspacePath $WorkspacePath
+    $artifactPath = Join-Path $autotaskDir $FileName
     [System.IO.File]::WriteAllText(
         $artifactPath,
         ($Content | ConvertTo-Json -Depth 20),
         $script:Utf8NoBom
     )
-    return (ConvertTo-RatatoskRelativePath -Path $artifactPath)
+    return (ConvertTo-AutotaskRelativePath -Path $artifactPath)
 }

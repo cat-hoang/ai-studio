@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Focus a Windows Terminal tab whose title contains the given job number.
 
@@ -28,7 +28,7 @@ $ErrorActionPreference = 'Stop'
 
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 
-Add-Type -Namespace Ratatosk.Native -Name Win32 -MemberDefinition @'
+Add-Type -Namespace Autotask.Native -Name Win32 -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("user32.dll")]
 public static extern bool SetForegroundWindow(System.IntPtr hWnd);
 '@
@@ -86,7 +86,7 @@ foreach ($wtWindow in $wtWindows) {
             }
 
             $handle = [System.IntPtr]$wtWindow.Current.NativeWindowHandle
-            [void][Ratatosk.Native.Win32]::SetForegroundWindow($handle)
+            [void][Autotask.Native.Win32]::SetForegroundWindow($handle)
             Write-Output "Focused tab '$name'."
             exit 0
         }

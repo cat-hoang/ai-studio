@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [string]$CommandText,
@@ -12,7 +12,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 
 function Get-FirstNonEmptyValue {
     param(
@@ -54,7 +54,7 @@ function Ensure-CommandHistory {
     )
 
     if (-not $State.PSObject.Properties['commandHistory']) {
-        Set-RatatoskProperty -Object $State -Name 'commandHistory' -Value @()
+        Set-AutotaskProperty -Object $State -Name 'commandHistory' -Value @()
     }
 }
 
@@ -89,7 +89,7 @@ function Add-CommandHistoryEntry {
         $history = @($history | Select-Object -Last 100)
     }
 
-    Set-RatatoskProperty -Object $State -Name 'commandHistory' -Value $history
+    Set-AutotaskProperty -Object $State -Name 'commandHistory' -Value $history
 }
 
 function Get-JobStateEntry {
@@ -104,7 +104,7 @@ function Get-JobStateEntry {
     )
 
     foreach ($bucketName in @('waitingQueue', 'workers', 'completedJobs', 'failedJobs')) {
-        $job = @($State.$bucketName | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $JobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+        $job = @($State.$bucketName | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $JobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
         if ($job) {
             return [PSCustomObject]@{
                 bucketName = $bucketName
@@ -130,8 +130,8 @@ function Remove-JobFromBucket {
         [string]$TaskSequence = ''
     )
 
-    $items = @($State.$BucketName | Where-Object { -not (Test-RatatoskJobMatch -Job $_ -JobNumber $JobNumber -TaskSequence $TaskSequence) })
-    Set-RatatoskProperty -Object $State -Name $BucketName -Value $items
+    $items = @($State.$BucketName | Where-Object { -not (Test-AutotaskJobMatch -Job $_ -JobNumber $JobNumber -TaskSequence $TaskSequence) })
+    Set-AutotaskProperty -Object $State -Name $BucketName -Value $items
 }
 
 function ConvertTo-StatusJobSummary {
@@ -175,7 +175,7 @@ function ConvertTo-StatusJobSummary {
 }
 
 function Get-StartableJobsSnapshot {
-    $scriptPath = Join-Path $PSScriptRoot 'get-ratatosk-startable-jobs.ps1'
+    $scriptPath = Join-Path $PSScriptRoot 'get-autotask-startable-jobs.ps1'
     if (-not (Test-Path -LiteralPath $scriptPath)) {
         return [PSCustomObject]@{
             warnings = @('Startable-jobs script not found.')
@@ -191,16 +191,16 @@ function Get-StartableJobsSnapshot {
 
         # Enrich each job with neverAutoStart from state.autoStartPreferences
         try {
-            $state = Read-RatatoskState
+            $state = Read-AutotaskState
             $prefs = Get-ObjectPropertyValue -Object $state -Name 'autoStartPreferences' -Default $null
             if ($null -ne $prefs) {
                 foreach ($job in $jobs) {
                     $jobNum = [string](Get-ObjectPropertyValue -Object $job -Name 'jobNumber' -Default '')
                     $taskSeq = [string](Get-ObjectPropertyValue -Object $job -Name 'taskSequence' -Default '')
-                    $key = Get-RatatoskJobKey -JobNumber $jobNum -TaskSequence $taskSeq
+                    $key = Get-AutotaskJobKey -JobNumber $jobNum -TaskSequence $taskSeq
                     $pref = Get-ObjectPropertyValue -Object $prefs -Name $key -Default $null
                     $neverAuto = ($pref -eq $true) -or ($null -ne $pref -and [bool](Get-ObjectPropertyValue -Object $pref -Name 'neverAutoStart' -Default $false))
-                    Set-RatatoskProperty -Object $job -Name 'neverAutoStart' -Value ([bool]$neverAuto)
+                    Set-AutotaskProperty -Object $job -Name 'neverAutoStart' -Value ([bool]$neverAuto)
                 }
             }
         } catch {
@@ -226,7 +226,7 @@ function Format-StatusMarkdownReport {
         [Parameter(Mandatory)]
         [PSCustomObject]$Data,
 
-        [string]$CommandPrefix = 'ratatosk:'
+        [string]$CommandPrefix = 'autotask:'
     )
 
     $lines = New-Object System.Collections.Generic.List[string]
@@ -431,7 +431,7 @@ function Get-CommandOptionParts {
     }
 }
 
-function Parse-RatatoskCommand {
+function Parse-AutotaskCommand {
     param(
         [Parameter(Mandatory)]
         [string]$RawCommand
@@ -629,13 +629,13 @@ function Invoke-QueueLikeCommand {
                     state = $State
                     stateChanged = $false
                     message = if ($ParsedCommand.action -eq 'start') {
-                        "$($ParsedCommand.jobNumber) is already queued. Run /ratatosk-start to spawn workers."
+                        "$($ParsedCommand.jobNumber) is already queued. Run /autotask-start to spawn workers."
                     } else {
                         "$($ParsedCommand.jobNumber) is already queued."
                     }
                     jobNumber = $ParsedCommand.jobNumber
                     action = $ParsedCommand.action
-                    requiresRatatoskStart = $true
+                    requiresAutotaskStart = $true
                 }
             }
 
@@ -660,7 +660,7 @@ function Invoke-QueueLikeCommand {
     $enrichedZone = 0
     if ([string]::IsNullOrWhiteSpace($enrichedDescription)) {
         try {
-            $enrichScript = Join-Path $PSScriptRoot 'enrich-ratatosk-job.ps1'
+            $enrichScript = Join-Path $PSScriptRoot 'enrich-autotask-job.ps1'
             if (Test-Path -LiteralPath $enrichScript) {
                 $enrichArgs = @('-JobNumber', $ParsedCommand.jobNumber)
                 if (-not [string]::IsNullOrWhiteSpace([string]$ParsedCommand.taskSequence)) {
@@ -689,10 +689,10 @@ function Invoke-QueueLikeCommand {
 
     # Override summary and description separately when enrichment provided both
     if (-not [string]::IsNullOrWhiteSpace($enrichedSummary)) {
-        Set-RatatoskProperty -Object $queuedJob -Name 'summary' -Value $enrichedSummary
+        Set-AutotaskProperty -Object $queuedJob -Name 'summary' -Value $enrichedSummary
     }
     if (-not [string]::IsNullOrWhiteSpace($enrichedDescription)) {
-        Set-RatatoskProperty -Object $queuedJob -Name 'description' -Value $enrichedDescription
+        Set-AutotaskProperty -Object $queuedJob -Name 'description' -Value $enrichedDescription
     }
 
     $State.waitingQueue = @($State.waitingQueue) + $queuedJob
@@ -700,13 +700,13 @@ function Invoke-QueueLikeCommand {
         state = $State
         stateChanged = $true
         message = if ($ParsedCommand.action -eq 'start') {
-            "Queued $($ParsedCommand.jobNumber). Run /ratatosk-start to spawn workers."
+            "Queued $($ParsedCommand.jobNumber). Run /autotask-start to spawn workers."
         } else {
-            "Queued $($ParsedCommand.jobNumber). Run /ratatosk-start to spawn workers."
+            "Queued $($ParsedCommand.jobNumber). Run /autotask-start to spawn workers."
         }
         jobNumber = $ParsedCommand.jobNumber
         action = $ParsedCommand.action
-        requiresRatatoskStart = $true
+        requiresAutotaskStart = $true
     }
 }
 
@@ -746,7 +746,7 @@ function Invoke-WorkerStartCommand {
         [string]$Mode
     )
 
-    $scriptPath = Join-Path $PSScriptRoot 'start-ratatosk-worker.ps1'
+    $scriptPath = Join-Path $PSScriptRoot 'start-autotask-worker.ps1'
     $startParameters = @{
         JobNumber = $ParsedCommand.jobNumber
         Mode = $Mode
@@ -764,12 +764,12 @@ function Invoke-WorkerStartCommand {
     $rawOutput = & $scriptPath @startParameters 2>&1 | Out-String
     $startResult = ConvertFrom-WorkerStartOutput -RawOutput $rawOutput
     return [PSCustomObject]@{
-        state = Read-RatatoskState
+        state = Read-AutotaskState
         stateChanged = $true
         message = [string]$startResult.message
         jobNumber = [string]$startResult.jobNumber
         action = $Mode
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
         data = $startResult
     }
 }
@@ -798,7 +798,7 @@ function Invoke-ResumeCommand {
         [string]$CommandSource
     )
 
-    $scriptPath = Join-Path $PSScriptRoot 'resume-ratatosk-worker.ps1'
+    $scriptPath = Join-Path $PSScriptRoot 'resume-autotask-worker.ps1'
     $resumeParameters = @{
         JobNumber = $ParsedCommand.jobNumber
         Source = $CommandSource
@@ -809,12 +809,12 @@ function Invoke-ResumeCommand {
     $rawOutput = & $scriptPath @resumeParameters 2>&1 | Out-String
     $resumeResult = ConvertFrom-WorkerStartOutput -RawOutput $rawOutput
     return [PSCustomObject]@{
-        state = Read-RatatoskState
+        state = Read-AutotaskState
         stateChanged = $true
         message = [string]$resumeResult.message
         jobNumber = [string]$resumeResult.jobNumber
         action = 'resume'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
         data = $resumeResult
     }
 }
@@ -833,7 +833,7 @@ function Invoke-CleanupCommand {
         throw "$($ParsedCommand.jobNumber) was not found in state."
     }
 
-    $selectedTaskKey = Get-RatatoskJobObjectKey -Job $existingEntry.job
+    $selectedTaskKey = Get-AutotaskJobObjectKey -Job $existingEntry.job
     $hasSiblingTasks = @(
         @($State.waitingQueue) +
         @($State.workers) +
@@ -842,7 +842,7 @@ function Invoke-CleanupCommand {
             Where-Object {
                 $_ -and
                 ([string](Get-ObjectPropertyValue -Object $_ -Name 'jobNumber' -Default '')).Trim().ToUpperInvariant() -eq $ParsedCommand.jobNumber.Trim().ToUpperInvariant() -and
-                (Get-RatatoskJobObjectKey -Job $_) -ne $selectedTaskKey
+                (Get-AutotaskJobObjectKey -Job $_) -ne $selectedTaskKey
             }
     ).Count -gt 0
 
@@ -860,7 +860,7 @@ function Invoke-CleanupCommand {
         }
         jobNumber = $ParsedCommand.jobNumber
         action = 'cleanup'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
     }
 }
 
@@ -886,12 +886,12 @@ function Invoke-StatusCommand {
 
         # Exclude jobs already running as active workers (by jobNumber+taskSequence key)
         $activeWorkerKeys = @($State.workers | ForEach-Object {
-            Get-RatatoskJobKey `
+            Get-AutotaskJobKey `
                 -JobNumber ([string](Get-ObjectPropertyValue -Object $_ -Name 'jobNumber' -Default '')) `
                 -TaskSequence ([string](Get-ObjectPropertyValue -Object $_ -Name 'taskSequence' -Default ''))
         })
         $dedupedStartable = @($startableSnapshot.startableJobs | Where-Object {
-            $key = Get-RatatoskJobKey `
+            $key = Get-AutotaskJobKey `
                 -JobNumber ([string](Get-ObjectPropertyValue -Object $_ -Name 'jobNumber' -Default '')) `
                 -TaskSequence ([string](Get-ObjectPropertyValue -Object $_ -Name 'taskSequence' -Default ''))
             $activeWorkerKeys -notcontains $key
@@ -911,7 +911,7 @@ function Invoke-StatusCommand {
 
         # Build a rich markdown report for Teams/plain-text channels
         $statusReport = Format-StatusMarkdownReport -Data $data
-        Set-RatatoskProperty -Object $data -Name 'statusReport' -Value $statusReport
+        Set-AutotaskProperty -Object $data -Name 'statusReport' -Value $statusReport
 
         $summaryMessage = "Startable: $($counts.startableJobs), Queue: $($counts.waitingQueue), Workers: $($counts.workers), Completed: $($counts.completedJobs), Failed: $($counts.failedJobs)"
         return [PSCustomObject]@{
@@ -920,7 +920,7 @@ function Invoke-StatusCommand {
             message = $summaryMessage
             jobNumber = ''
             action = 'status'
-            requiresRatatoskStart = $false
+            requiresAutotaskStart = $false
             data = $data
         }
     }
@@ -937,7 +937,7 @@ function Invoke-StatusCommand {
         message = "$($ParsedCommand.jobNumber) is in $($existingEntry.bucketName)."
         jobNumber = $ParsedCommand.jobNumber
         action = 'status'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
         data = (ConvertTo-StatusJobSummary -Job $job -Bucket $existingEntry.bucketName)
     }
 }
@@ -954,7 +954,7 @@ function Invoke-HelpCommand {
         message = 'Supported commands: help, status [jobNumber] [--task <taskSequence>], queue <jobNumber> [--task <taskSequence>] [taskType] [description], start <jobNumber> [--task <taskSequence>], resume <jobNumber> [--task <taskSequence>], retry <jobNumber> [--task <taskSequence>], cleanup <jobNumber> [--task <taskSequence>], notes <jobNumber> --task <taskSequence>, setnotes <jobNumber> --task <taskSequence> <content>, reply <jobNumber> <message>, answer <jobNumber> <message>.'
         jobNumber = ''
         action = 'help'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
     }
 }
 
@@ -973,7 +973,7 @@ function Invoke-ReplyCommand {
         [string]$MessageId
     )
 
-    $scriptPath = Join-Path $PSScriptRoot 'submit-ratatosk-user-input.ps1'
+    $scriptPath = Join-Path $PSScriptRoot 'submit-autotask-user-input.ps1'
     $replyParameters = @{
         JobNumber = $ParsedCommand.jobNumber
         Response = $ParsedCommand.response
@@ -994,14 +994,14 @@ function Invoke-ReplyCommand {
     }
 
     $result = $resultText | ConvertFrom-Json
-    $updatedState = Read-RatatoskState
+    $updatedState = Read-AutotaskState
     return [PSCustomObject]@{
         state = $updatedState
         stateChanged = $true
         message = "Reply sent for $($ParsedCommand.jobNumber)."
         jobNumber = $ParsedCommand.jobNumber
         action = 'reply'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
         data = $result
     }
 }
@@ -1014,9 +1014,9 @@ function Invoke-GetNotesCommand {
 
     $jobNumber = $ParsedCommand.jobNumber
     $taskSequence = [string]$ParsedCommand.taskSequence
-    $scriptPath = Join-Path $PSScriptRoot 'get-ratatosk-task-notes.ps1'
+    $scriptPath = Join-Path $PSScriptRoot 'get-autotask-task-notes.ps1'
     if (-not (Test-Path -LiteralPath $scriptPath)) {
-        throw "get-ratatosk-task-notes.ps1 not found."
+        throw "get-autotask-task-notes.ps1 not found."
     }
 
     $rawOutput = & $scriptPath -JobNumber $jobNumber -TaskSequence $taskSequence 2>&1
@@ -1040,7 +1040,7 @@ function Invoke-GetNotesCommand {
         message = $preview
         jobNumber = $jobNumber
         action = 'notes'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
         data = [PSCustomObject]@{
             taskId = $taskId
             notes = $notes
@@ -1058,9 +1058,9 @@ function Invoke-SetNotesCommand {
     $jobNumber = $ParsedCommand.jobNumber
     $taskSequence = [string]$ParsedCommand.taskSequence
     $content = if ($ParsedCommand.PSObject.Properties['content']) { [string]$ParsedCommand.content } else { '' }
-    $scriptPath = Join-Path $PSScriptRoot 'set-ratatosk-task-notes.ps1'
+    $scriptPath = Join-Path $PSScriptRoot 'set-autotask-task-notes.ps1'
     if (-not (Test-Path -LiteralPath $scriptPath)) {
-        throw "set-ratatosk-task-notes.ps1 not found."
+        throw "set-autotask-task-notes.ps1 not found."
     }
 
     $rawOutput = & $scriptPath -JobNumber $jobNumber -TaskSequence $taskSequence -Content $content 2>&1
@@ -1079,14 +1079,14 @@ function Invoke-SetNotesCommand {
         message = "Notes saved for $jobNumber task $taskSequence."
         jobNumber = $jobNumber
         action = 'setnotes'
-        requiresRatatoskStart = $false
+        requiresAutotaskStart = $false
         data = [PSCustomObject]@{
             savedChars = $content.Length
         }
     }
 }
 
-function Invoke-RatatoskCommand {
+function Invoke-AutotaskCommand {
     param(
         [Parameter(Mandatory)]
         [psobject]$State,
@@ -1157,7 +1157,7 @@ function New-CommandResult {
         [string]$Error = '',
         [string]$Command = '',
         [bool]$Duplicate = $false,
-        [bool]$RequiresRatatoskStart = $false,
+        [bool]$RequiresAutotaskStart = $false,
         $Data = $null
     )
 
@@ -1169,7 +1169,7 @@ function New-CommandResult {
         jobNumber = $JobNumber
         message = $Message
         error = $Error
-        requiresRatatoskStart = $RequiresRatatoskStart
+        requiresAutotaskStart = $RequiresAutotaskStart
         data = $Data
         receivedAt = (Get-Date).ToUniversalTime().ToString('o')
     }
@@ -1181,15 +1181,15 @@ function Main {
     $resultObject = $null
 
     try {
-        $state = Read-RatatoskState
+        $state = Read-AutotaskState
         $existingEntry = Get-CommandHistoryEntry -State $state -MessageId $MessageId
         if ($existingEntry) {
             $duplicateData = Get-ObjectPropertyValue -Object $existingEntry -Name 'data' -Default $null
             $duplicateMessage = [string]$existingEntry.message
 
             if ([string]$existingEntry.action -eq 'status') {
-                $parsedCommand = Parse-RatatoskCommand -RawCommand $trimmedCommand
-                $dispatchResult = Invoke-RatatoskCommand -State $state -ParsedCommand $parsedCommand -CommandSource $resolvedSource -Responder $Responder -MessageId $MessageId
+                $parsedCommand = Parse-AutotaskCommand -RawCommand $trimmedCommand
+                $dispatchResult = Invoke-AutotaskCommand -State $state -ParsedCommand $parsedCommand -CommandSource $resolvedSource -Responder $Responder -MessageId $MessageId
                 $duplicateData = Get-ObjectPropertyValue -Object $dispatchResult -Name 'data' -Default $duplicateData
                 $duplicateMessage = [string]$dispatchResult.message
             }
@@ -1202,11 +1202,11 @@ function Main {
                 -Error ([string]$existingEntry.error) `
                 -Command $trimmedCommand `
                 -Duplicate $true `
-                -RequiresRatatoskStart ([bool]$existingEntry.requiresRatatoskStart) `
+                -RequiresAutotaskStart ([bool]$existingEntry.requiresAutotaskStart) `
                 -Data $duplicateData
         } else {
-            $parsedCommand = Parse-RatatoskCommand -RawCommand $trimmedCommand
-            $dispatchResult = Invoke-RatatoskCommand -State $state -ParsedCommand $parsedCommand -CommandSource $resolvedSource -Responder $Responder -MessageId $MessageId
+            $parsedCommand = Parse-AutotaskCommand -RawCommand $trimmedCommand
+            $dispatchResult = Invoke-AutotaskCommand -State $state -ParsedCommand $parsedCommand -CommandSource $resolvedSource -Responder $Responder -MessageId $MessageId
             $updatedState = if (Get-ObjectPropertyValue -Object $dispatchResult -Name 'state' -Default $null) { $dispatchResult.state } else { $state }
 
             $resultObject = New-CommandResult `
@@ -1215,7 +1215,7 @@ function Main {
                 -JobNumber ([string]$dispatchResult.jobNumber) `
                 -Message ([string]$dispatchResult.message) `
                 -Command $trimmedCommand `
-                -RequiresRatatoskStart ([bool]$dispatchResult.requiresRatatoskStart) `
+                -RequiresAutotaskStart ([bool]$dispatchResult.requiresAutotaskStart) `
                 -Data (Get-ObjectPropertyValue -Object $dispatchResult -Name 'data' -Default $null)
 
             $historyEntry = [PSCustomObject]@{
@@ -1229,17 +1229,17 @@ function Main {
                 jobNumber = [string]$dispatchResult.jobNumber
                 message = [string]$dispatchResult.message
                 error = ''
-                requiresRatatoskStart = [bool]$dispatchResult.requiresRatatoskStart
+                requiresAutotaskStart = [bool]$dispatchResult.requiresAutotaskStart
                 data = (Get-ObjectPropertyValue -Object $dispatchResult -Name 'data' -Default $null)
             }
             Add-CommandHistoryEntry -State $updatedState -Entry $historyEntry
-            Write-RatatoskState -State $updatedState
+            Write-AutotaskState -State $updatedState
         }
     } catch {
-        $updatedState = Read-RatatoskState
+        $updatedState = Read-AutotaskState
         $resultObject = New-CommandResult `
             -Success $false `
-            -Message 'Ratatosk command failed.' `
+            -Message 'Autotask command failed.' `
             -Error $_.Exception.Message `
             -Command $trimmedCommand
 
@@ -1254,11 +1254,11 @@ function Main {
             jobNumber = ''
             message = $resultObject.message
             error = $resultObject.error
-            requiresRatatoskStart = $false
+            requiresAutotaskStart = $false
             data = $null
         }
         Add-CommandHistoryEntry -State $updatedState -Entry $historyEntry
-        Write-RatatoskState -State $updatedState
+        Write-AutotaskState -State $updatedState
     }
 
     $json = $resultObject | ConvertTo-Json -Depth 20

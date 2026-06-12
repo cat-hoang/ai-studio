@@ -1,8 +1,8 @@
-# Ratatosk Troubleshooting Guide
+﻿# Autotask Troubleshooting Guide
 
 ## VPN or internal connectivity problems
 
-**Symptom:** Ratatosk cannot reach PAVE, ediprod, Crikey, or other internal services.
+**Symptom:** Autotask cannot reach PAVE, ediprod, Crikey, or other internal services.
 
 **What to check:**
 
@@ -10,7 +10,7 @@
 2. Confirm the configured hosts are reachable from your machine
 3. Re-run the action after connectivity is restored
 
-Ratatosk depends on VPN-backed services for startable polling, ediprod access, and build artifact downloads.
+Autotask depends on VPN-backed services for startable polling, ediprod access, and build artifact downloads.
 
 ---
 
@@ -29,13 +29,13 @@ Ratatosk depends on VPN-backed services for startable polling, ediprod access, a
    pm2 start dashboard/ecosystem.config.js
 
    # Subsequent restarts (e.g. after pulling server.js changes)
-   pm2 restart ratatosk-dashboard
+   pm2 restart autotask-dashboard
 
    # Check status
    pm2 list
 
    # Tail live logs
-   pm2 logs ratatosk-dashboard
+   pm2 logs autotask-dashboard
    ~~~
 
    If PM2 is not installed: `npm install -g pm2` then `pm2 start dashboard/ecosystem.config.js`.
@@ -75,7 +75,7 @@ Typical causes:
 
 **Symptom:** You expected startable work, but the dashboard shows none or fewer jobs than expected.
 
-Current startable behavior is stricter than a raw board snapshot. Ratatosk:
+Current startable behavior is stricter than a raw board snapshot. Autotask:
 
 1. uses **BM OData** as the primary source; falls back to **PAVE API** when BM OData returns nothing (requires `buffer_board_url` pointing to a running PAVE instance)
 2. filters out hard-excluded task types
@@ -88,7 +88,7 @@ Current startable behavior is stricter than a raw board snapshot. Ratatosk:
 1. Confirm `staff_code`, `board_name`, and `buffer_board_url`
 2. Confirm the task is actually startable in PAVE
 3. Check whether the task is a review task with no staff assignment
-4. Check whether the job is already in one of Ratatosk's other columns
+4. Check whether the job is already in one of Autotask's other columns
 5. Toggle **Show Never Auto** if you previously hid those cards
 
 If the Startable Poller shows a warning such as **"PAVE API fallback skipped: PAVE portal not running"**, this is normal when the PAVE buffer board is not running locally. BM OData is the primary source; the PAVE fallback fires only when BM OData returns no results. The warning is informational.
@@ -125,13 +125,13 @@ If the Startable Poller shows a warning such as **"PAVE API fallback skipped: PA
 **Fix:** Restart the server. It will log the resolved state path on startup:
 
 ~~~text
-State file: C:\BS\ratatosk\temp\state.json
+State file: C:\BS\autotask\temp\state.json
 ~~~
 
 Restart command:
 
 ~~~powershell
-pm2 restart ratatosk-dashboard
+pm2 restart autotask-dashboard
 ~~~
 
 > **Rule of thumb:** always restart the dashboard server after pulling or committing changes to `dashboard/server.js`.
@@ -142,7 +142,7 @@ pm2 restart ratatosk-dashboard
 
 **Symptom:** A worker stops making visible progress, or the attention strip marks it as stale.
 
-Ratatosk marks a worker stale when its heartbeat has not updated for longer than `worker_stale_grace_ms` (default 30 minutes).
+Autotask marks a worker stale when its heartbeat has not updated for longer than `worker_stale_grace_ms` (default 30 minutes).
 
 **What to check:**
 
@@ -177,7 +177,7 @@ Ratatosk marks a worker stale when its heartbeat has not updated for longer than
 4. Send a Teams command if Teams direct chat polling is enabled:
 
    ~~~text
-   ratatosk: reply WI00975129 Use option A
+   autotask: reply WI00975129 Use option A
    ~~~
 
 If your answer does not arrive, check the Mail Poller or Teams Poller status and the relevant authentication path.
@@ -190,9 +190,9 @@ If your answer does not arrive, check the Mail Poller or Teams Poller status and
 
 **This is expected.**
 
-Current cleanup behavior removes the job from Ratatosk state and **preserves the workspace folder on disk**.
+Current cleanup behavior removes the job from Autotask state and **preserves the workspace folder on disk**.
 
-Ratatosk keeps the workspace so you do not lose:
+Autotask keeps the workspace so you do not lose:
 
 - local branches
 - logs
@@ -218,11 +218,11 @@ This usually means the state still contains a legacy `cleanupBlockedReason` from
 
 ---
 
-## Can I lock my computer while Ratatosk is running?
+## Can I lock my computer while Autotask is running?
 
 **Short answer:** yes, usually.
 
-Ratatosk runs in your logged-in user session and workers are launched as Windows Terminal tabs. Locking the screen usually allows existing work to continue.
+Autotask runs in your logged-in user session and workers are launched as Windows Terminal tabs. Locking the screen usually allows existing work to continue.
 
 **What is not safe for unattended work:**
 
@@ -233,7 +233,7 @@ Ratatosk runs in your logged-in user session and workers are launched as Windows
 - VPN loss
 - network loss
 
-If you want Ratatosk to keep running while you are away, lock the machine but keep it awake.
+If you want Autotask to keep running while you are away, lock the machine but keep it awake.
 
 ---
 
@@ -250,13 +250,13 @@ If you want Ratatosk to keep running while you are away, lock the machine but ke
 3. `worker_cli` is set correctly in `config.local.yaml`
 4. The workspace path and prompt file still exist
 
-Ratatosk launches workers through `tools\launch-ratatosk-worker.ps1`, so Windows Terminal and the target CLI must both be available.
+Autotask launches workers through `tools\launch-autotask-worker.ps1`, so Windows Terminal and the target CLI must both be available.
 
 ---
 
 ## Email replies or command emails are not being processed
 
-**Symptom:** You replied by email or sent a structured command email, but Ratatosk did nothing.
+**Symptom:** You replied by email or sent a structured command email, but Autotask did nothing.
 
 **What to check:**
 
@@ -290,7 +290,7 @@ Supported structured email commands currently include:
 
 ## Teams replies or direct Teams commands do not work
 
-**Symptom:** You sent a direct Teams command such as `ratatosk: status`, or tried to answer a worker through Teams, but Ratatosk did nothing.
+**Symptom:** You sent a direct Teams command such as `autotask: status`, or tried to answer a worker through Teams, but Autotask did nothing.
 
 **What to check:**
 
@@ -302,7 +302,7 @@ Supported structured email commands currently include:
 6. Your Teams message begins with the configured prefix, such as:
 
    ~~~text
-   ratatosk:
+   autotask:
    ~~~
 
 7. Local Teams auth has not expired
@@ -323,7 +323,7 @@ If you are intentionally using webhook-only Teams mode, direct Teams replies sti
 
 1. Refresh GitHub auth if needed
 2. Re-authenticate the active CLI if prompted
-3. If `worker_cli: auto`, confirm Ratatosk resolved the CLI you expect
+3. If `worker_cli: auto`, confirm Autotask resolved the CLI you expect
 
 For dashboard/email-driven commands, launch failures are often authentication failures underneath.
 
@@ -335,7 +335,7 @@ For dashboard/email-driven commands, launch failures are often authentication fa
 
 **Before escalating to the user:**
 
-The edi CLI stores its token on disk. Auth errors in Ratatosk workers are almost always caused by **stale shell environment** in a long-running PowerShell session — not an actually expired token.
+The edi CLI stores its token on disk. Auth errors in Autotask workers are almost always caused by **stale shell environment** in a long-running PowerShell session — not an actually expired token.
 
 1. **Do NOT immediately tell the user to run `edi login`.**
 2. Open a fresh PowerShell session (new `powershell` tool call) and retry the exact same command.

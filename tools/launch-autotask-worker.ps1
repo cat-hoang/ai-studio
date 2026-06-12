@@ -1,4 +1,4 @@
-[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
+﻿[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
     [Parameter(Mandatory)]
     [ValidateSet('auto', 'claude', 'copilot')]
@@ -229,7 +229,7 @@ function Main {
     }
 
     if (-not (Test-CommandAvailable -Name 'wt.exe')) {
-        throw 'Windows Terminal (wt.exe) is required to launch Ratatosk workers.'
+        throw 'Windows Terminal (wt.exe) is required to launch Autotask workers.'
     }
 
     if (-not (Test-CommandAvailable -Name $resolvedCli)) {
@@ -246,7 +246,7 @@ function Main {
         New-CopilotTabArguments -ResolvedWorkspacePath $resolvedWorkspacePath -ResolvedPromptFile $resolvedPromptFile -ResolvedPluginDir $resolvedPluginDir -Title $title
     }
 
-    if ($PSCmdlet.ShouldProcess($title, "Launch Ratatosk worker via $resolvedCli")) {
+    if ($PSCmdlet.ShouldProcess($title, "Launch Autotask worker via $resolvedCli")) {
         & wt.exe @argumentList | Out-Null
     }
 

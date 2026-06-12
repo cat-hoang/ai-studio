@@ -1,8 +1,8 @@
-/**
- * Shared types for the Ratatosk issue-source adapter layer.
+﻿/**
+ * Shared types for the Autotask issue-source adapter layer.
  *
  * All adapters (GitHub Issues, Linear, Jira, file) produce Issues
- * in this canonical shape — the same shape that get-ratatosk-startable-jobs.ps1
+ * in this canonical shape — the same shape that get-autotask-startable-jobs.ps1
  * and the dashboard consume.
  */
 

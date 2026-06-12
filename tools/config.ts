@@ -1,4 +1,4 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 
 /** Read a simple top-level YAML `key: value` pair. Last occurrence wins. */
@@ -33,7 +33,7 @@ export function readYamlList(filePath: string, key: string): string[] {
   return stripped.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
 }
 
-/** Resolve the Ratatosk repo root (parent of tools/) */
+/** Resolve the Autotask repo root (parent of tools/) */
 export function repoRoot(): string {
   return path.resolve(__dirname, '..');
 }

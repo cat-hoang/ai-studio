@@ -1,26 +1,26 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Get-RatatoskConfigRootPath {
-    if (Get-Command -Name Get-RatatoskRootPath -ErrorAction SilentlyContinue) {
-        return Get-RatatoskRootPath
+function Get-AutotaskConfigRootPath {
+    if (Get-Command -Name Get-AutotaskRootPath -ErrorAction SilentlyContinue) {
+        return Get-AutotaskRootPath
     }
 
     return (Split-Path -Parent $PSScriptRoot)
 }
 
-function Get-RatatoskConfigContent {
+function Get-AutotaskConfigContent {
     param(
         [string[]]$Paths = @()
     )
 
-    $ratatoskRoot = Get-RatatoskConfigRootPath
+    $autotaskRoot = Get-AutotaskConfigRootPath
     $effectivePaths = if ($Paths.Count -gt 0) {
         @($Paths)
     } else {
         @(
-            (Join-Path $ratatoskRoot 'config.yaml'),
-            (Join-Path $ratatoskRoot 'config.local.yaml')
+            (Join-Path $autotaskRoot 'config.yaml'),
+            (Join-Path $autotaskRoot 'config.local.yaml')
         )
     }
 
@@ -33,7 +33,7 @@ function Get-RatatoskConfigContent {
     return ($chunks -join [Environment]::NewLine)
 }
 
-function Get-RatatoskConfigTextValue {
+function Get-AutotaskConfigTextValue {
     param(
         [Parameter(Mandatory)]
         [string]$Content,
@@ -70,7 +70,7 @@ function Get-RatatoskConfigTextValue {
     return $Default
 }
 
-function Get-RatatoskConfigBooleanValue {
+function Get-AutotaskConfigBooleanValue {
     param(
         [Parameter(Mandatory)]
         [string]$Content,
@@ -81,7 +81,7 @@ function Get-RatatoskConfigBooleanValue {
         [bool]$Default = $false
     )
 
-    $rawValue = Get-RatatoskConfigTextValue -Content $Content -Key $Key
+    $rawValue = Get-AutotaskConfigTextValue -Content $Content -Key $Key
     if ([string]::IsNullOrWhiteSpace($rawValue)) {
         return $Default
     }
@@ -97,7 +97,7 @@ function Get-RatatoskConfigBooleanValue {
     }
 }
 
-function Get-RatatoskConfigNumberValue {
+function Get-AutotaskConfigNumberValue {
     param(
         [Parameter(Mandatory)]
         [string]$Content,
@@ -108,7 +108,7 @@ function Get-RatatoskConfigNumberValue {
         [int]$Default = 0
     )
 
-    $rawValue = Get-RatatoskConfigTextValue -Content $Content -Key $Key
+    $rawValue = Get-AutotaskConfigTextValue -Content $Content -Key $Key
     if ([string]::IsNullOrWhiteSpace($rawValue)) {
         return $Default
     }
@@ -121,7 +121,7 @@ function Get-RatatoskConfigNumberValue {
     return $Default
 }
 
-function Get-RatatoskConfigListValue {
+function Get-AutotaskConfigListValue {
     param(
         [Parameter(Mandatory)]
         [string]$Content,
@@ -130,7 +130,7 @@ function Get-RatatoskConfigListValue {
         [string]$Key
     )
 
-    $rawValue = Get-RatatoskConfigTextValue -Content $Content -Key $Key
+    $rawValue = Get-AutotaskConfigTextValue -Content $Content -Key $Key
     if ([string]::IsNullOrWhiteSpace($rawValue)) {
         return @()
     }

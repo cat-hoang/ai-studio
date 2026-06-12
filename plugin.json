@@ -1,7 +1,7 @@
-{
-  "name": "ratatosk",
+﻿{
+  "name": "autotask",
   "version": "1.0.0",
-  "description": "Ratatosk task orchestrator — shared Claude and Copilot orchestration core",
+  "description": "Autotask task orchestrator — shared Claude and Copilot orchestration core",
   "author": {
     "name": "Hoai Tran"
   },

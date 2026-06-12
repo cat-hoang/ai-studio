@@ -1,4 +1,4 @@
-# Ratatosk Orchestrator — Setup
+﻿# Autotask Orchestrator — Setup
 
 Automated multi-agent task orchestrator for software development workflows.
 
@@ -30,32 +30,32 @@ The installer will:
 
 ### Usage options
 
-Ratatosk can be orchestrated from either **GitHub Copilot CLI** or **Claude Code CLI**.
+Autotask can be orchestrated from either **GitHub Copilot CLI** or **Claude Code CLI**.
 
 #### Option A — GitHub Copilot CLI (most economical)
 
-1. Open a terminal in the Ratatosk folder.
+1. Open a terminal in the Autotask folder.
 2. Start Copilot CLI with a cost-effective model (0× premium requests):
    ```
    copilot -i --model gpt-4o-mini --plugin-dir .
    ```
-3. Tell Copilot: **"start ratatosk server"**
+3. Tell Copilot: **"start autotask server"**
 4. Subsequent task agents are launched with Copilot CLI.
 
 #### Option B — Claude Code CLI
 
-1. Open a terminal in the Ratatosk folder.
+1. Open a terminal in the Autotask folder.
 2. Start Claude Code:
    ```
    claude
    ```
-3. Tell Claude: **"start ratatosk server"**
+3. Tell Claude: **"start autotask server"**
 4. Subsequent task agents are launched with Claude Code.
 
 ### Launch the orchestrator
 
 ```ai-command
-/ratatosk-start
+/autotask-start
 ```
 
 ## Configuration Reference
@@ -70,7 +70,7 @@ Ratatosk can be orchestrated from either **GitHub Copilot CLI** or **Claude Code
 | `model_routing` | Preferred model tier per task phase |
 | `startable_jobs_polling_interval_ms` | Poll interval for refreshing the dashboard Startable column |
 | `startable_jobs_fetch_timeout_ms` | Timeout for one Startable-column refresh attempt |
-| `email_command_intake_enabled` | Enable structured command emails for Ratatosk |
+| `email_command_intake_enabled` | Enable structured command emails for Autotask |
 | `email_command_subject_prefix` | Subject prefix for command emails |
 | `email_command_allowed_senders` | Comma-separated allowlist for command emails |
 
@@ -91,16 +91,16 @@ Ratatosk can be orchestrated from either **GitHub Copilot CLI** or **Claude Code
 
 | Command | Description |
 | ------- | ----------- |
-| `/ratatosk-start` | Start the orchestrator for the day |
-| `/ratatosk-queue` | Add an issue to the work queue |
-| `/ratatosk-status` | Dashboard of active workers and progress |
-| `/ratatosk-continue` | Resume a paused task |
-| `/ratatosk-wrapup` | End-of-day wrap-up and summary |
+| `/autotask-start` | Start the orchestrator for the day |
+| `/autotask-queue` | Add an issue to the work queue |
+| `/autotask-status` | Dashboard of active workers and progress |
+| `/autotask-continue` | Resume a paused task |
+| `/autotask-wrapup` | End-of-day wrap-up and summary |
 
 ## Worker final reports
 
-Ratatosk workers should not stop silently.
+Autotask workers should not stop silently.
 
-- Use `.\tools\finalize-ratatosk-worker.ps1` on both success and failure.
-- The script writes `.ratatosk\final-report.json` inside the workspace, updates `state.json`, and sends completion/failure notifications.
-- Claude sessions also load a Stop hook from `hooks\hooks.json` that blocks exit if a Ratatosk worker has no final report yet.
+- Use `.\tools\finalize-autotask-worker.ps1` on both success and failure.
+- The script writes `.autotask\final-report.json` inside the workspace, updates `state.json`, and sends completion/failure notifications.
+- Claude sessions also load a Stop hook from `hooks\hooks.json` that blocks exit if a Autotask worker has no final report yet.

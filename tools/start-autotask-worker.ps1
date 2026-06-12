@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [string]$JobNumber,
@@ -17,7 +17,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 
 function Get-ConfigContent {
     param(
@@ -655,15 +655,15 @@ function Get-EdiProdTaskType {
         [string]$TaskSequence,
 
         [Parameter(Mandatory)]
-        [string]$RatatoskRoot
+        [string]$AutotaskRoot
     )
 
     # Strategy 1: ask the local dashboard server for the startable-jobs cache.
     # The dashboard already has task types from the buffer board poller.
     try {
         $configContent = Get-ConfigContent -Path @(
-            (Join-Path $RatatoskRoot 'config.yaml'),
-            (Join-Path $RatatoskRoot 'config.local.yaml')
+            (Join-Path $AutotaskRoot 'config.yaml'),
+            (Join-Path $AutotaskRoot 'config.local.yaml')
         )
         $port = Get-FirstNonEmptyValue -Values @(
             (Get-ConfigTextValue -Content $configContent -Key 'dashboard_port'),
@@ -734,10 +734,10 @@ function Get-JobEntry {
         [string]$TaskSequence = ''
     )
 
-    $waitingJob = @($State.waitingQueue | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
-    $failedJob = @($State.failedJobs | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
-    $completedJob = @($State.completedJobs | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
-    $worker = Get-RatatoskWorker -State $State -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence
+    $waitingJob = @($State.waitingQueue | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+    $failedJob = @($State.failedJobs | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+    $completedJob = @($State.completedJobs | Where-Object { Test-AutotaskJobMatch -Job $_ -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+    $worker = Get-AutotaskWorker -State $State -JobNumber $ResolvedJobNumber -TaskSequence $TaskSequence
 
     return [PSCustomObject]@{
         waitingJob = $waitingJob
@@ -753,10 +753,10 @@ function Main {
         throw "Invalid job number: $JobNumber"
     }
 
-    $ratatoskRoot = Get-RatatoskRootPath
+    $autotaskRoot = Get-AutotaskRootPath
     $configContent = Get-ConfigContent -Path @(
-        (Join-Path $ratatoskRoot 'config.yaml'),
-        (Join-Path $ratatoskRoot 'config.local.yaml')
+        (Join-Path $autotaskRoot 'config.yaml'),
+        (Join-Path $autotaskRoot 'config.local.yaml')
     )
 
     $workerCli = Get-ConfigTextValue -Content $configContent -Key 'worker_cli' -Default 'claude'
@@ -778,18 +778,18 @@ function Main {
         throw 'git_source_root is not configured.'
     }
 
-    $workspaceRootPath = Resolve-RatatoskPath -Path $workspaceRootConfig
-    $gitSourceRootPath = Resolve-RatatoskPath -Path $gitSourceRootConfig
+    $workspaceRootPath = Resolve-AutotaskPath -Path $workspaceRootConfig
+    $gitSourceRootPath = Resolve-AutotaskPath -Path $gitSourceRootConfig
     $workspacePath = Join-Path $workspaceRootPath $resolvedJobNumber
-    $workspaceRelativePath = ConvertTo-RatatoskRelativePath -Path $workspacePath
-    $promptFilePath = Join-Path $workspacePath '.ratatosk-prompt.md'
+    $workspaceRelativePath = ConvertTo-AutotaskRelativePath -Path $workspacePath
+    $promptFilePath = Join-Path $workspacePath '.autotask-prompt.md'
     $branchName = '{0}/{1}' -f $branchPrefix.TrimEnd('/'), $resolvedJobNumber
 
     if (-not (Test-Path -LiteralPath $workspacePath)) {
         New-Item -ItemType Directory -Path $workspacePath -Force | Out-Null
     }
 
-    $state = Read-RatatoskState
+    $state = Read-AutotaskState
     $jobEntry = Get-JobEntry -State $state -ResolvedJobNumber $resolvedJobNumber -TaskSequence $TaskSequence
     if ($jobEntry.worker) {
         throw "$resolvedJobNumber already has an active worker."
@@ -846,16 +846,16 @@ function Main {
     }
 
     if (-not [string]::IsNullOrWhiteSpace($TaskSequence)) {
-        Set-RatatoskProperty -Object $job -Name 'taskSequence' -Value $TaskSequence
+        Set-AutotaskProperty -Object $job -Name 'taskSequence' -Value $TaskSequence
     }
 
     if (-not [string]::IsNullOrWhiteSpace($TaskType)) {
-        Set-RatatoskProperty -Object $job -Name 'taskType' -Value $TaskType
+        Set-AutotaskProperty -Object $job -Name 'taskType' -Value $TaskType
     }
 
     if (-not [string]::IsNullOrWhiteSpace($Description)) {
-        Set-RatatoskProperty -Object $job -Name 'summary' -Value $Description
-        Set-RatatoskProperty -Object $job -Name 'description' -Value $Description
+        Set-AutotaskProperty -Object $job -Name 'summary' -Value $Description
+        Set-AutotaskProperty -Object $job -Name 'description' -Value $Description
     }
 
     $repoSelection = Resolve-JobRepoSelection -Job $job -DefaultRepos $defaultRepos -ProductRepoMapping $productRepoMapping
@@ -879,9 +879,9 @@ function Main {
     }
     $existingPrUrls = @($branchTargets.prUrls)
 
-    $ratatoskMetaDir = Join-Path $workspacePath '.ratatosk'
-    if (-not (Test-Path -LiteralPath $ratatoskMetaDir)) {
-        New-Item -ItemType Directory -Path $ratatoskMetaDir | Out-Null
+    $autotaskMetaDir = Join-Path $workspacePath '.autotask'
+    if (-not (Test-Path -LiteralPath $autotaskMetaDir)) {
+        New-Item -ItemType Directory -Path $autotaskMetaDir | Out-Null
     }
 
     if ($workspaceMode -eq 'reference') {
@@ -891,7 +891,7 @@ function Main {
             $repoPaths[$repo] = Join-Path $gitSourceRootPath $repo
         }
         $repoPathsJson = $repoPaths | ConvertTo-Json -Depth 3
-        Write-Utf8File -Path (Join-Path $ratatoskMetaDir 'repo-paths.json') -Content $repoPathsJson
+        Write-Utf8File -Path (Join-Path $autotaskMetaDir 'repo-paths.json') -Content $repoPathsJson
     } else {
         # Clone mode: worker handles cloning in Phase 1 for responsiveness (terminal opens immediately)
     }
@@ -914,7 +914,7 @@ function Main {
     )
     if ($needsEnrichment) {
         try {
-            $enrichScript = Join-Path $PSScriptRoot 'enrich-ratatosk-job.ps1'
+            $enrichScript = Join-Path $PSScriptRoot 'enrich-autotask-job.ps1'
             if (Test-Path -LiteralPath $enrichScript) {
                 $enrichArgs = @('-JobNumber', $resolvedJobNumber)
                 $jobTaskSeq = [string](Get-ObjectPropertyValue -Object $job -Name 'taskSequence' -Default '')
@@ -929,18 +929,18 @@ function Main {
                     $eGuid = [string](Get-ObjectPropertyValue -Object $enriched -Name 'jobGuid' -Default '')
                     $eZone = if ($null -ne $enriched.zone) { [int]$enriched.zone } else { 0 }
                     if (-not [string]::IsNullOrWhiteSpace($eSummary)) {
-                        Set-RatatoskProperty -Object $job -Name 'summary' -Value $eSummary
+                        Set-AutotaskProperty -Object $job -Name 'summary' -Value $eSummary
                     }
                     if (-not [string]::IsNullOrWhiteSpace($eDesc)) {
-                        Set-RatatoskProperty -Object $job -Name 'description' -Value $eDesc
+                        Set-AutotaskProperty -Object $job -Name 'description' -Value $eDesc
                     }
                     if (-not [string]::IsNullOrWhiteSpace($eGuid) -and [string]::IsNullOrWhiteSpace($jobGuid)) {
                         $jobGuid = $eGuid
-                        Set-RatatoskProperty -Object $job -Name 'jobGuid' -Value $eGuid
+                        Set-AutotaskProperty -Object $job -Name 'jobGuid' -Value $eGuid
                     }
                     if ($eZone -ne 0 -and $zone -eq 0) {
                         $zone = $eZone
-                        Set-RatatoskProperty -Object $job -Name 'zone' -Value $eZone
+                        Set-AutotaskProperty -Object $job -Name 'zone' -Value $eZone
                     }
                 }
             }
@@ -962,10 +962,10 @@ function Main {
     # If taskType is still unknown but we have a task sequence, look it up from ediProd
     # so the terminal tab shows "WI# DEV" instead of "WI# unknown".
     if ($taskType -eq 'unknown' -and -not [string]::IsNullOrWhiteSpace($taskSequence)) {
-        $fetchedTaskType = Get-EdiProdTaskType -JobNumber $resolvedJobNumber -TaskSequence $taskSequence -RatatoskRoot $ratatoskRoot
+        $fetchedTaskType = Get-EdiProdTaskType -JobNumber $resolvedJobNumber -TaskSequence $taskSequence -AutotaskRoot $autotaskRoot
         if (-not [string]::IsNullOrWhiteSpace($fetchedTaskType)) {
             $taskType = $fetchedTaskType
-            Set-RatatoskProperty -Object $job -Name 'taskType' -Value $taskType
+            Set-AutotaskProperty -Object $job -Name 'taskType' -Value $taskType
         }
     }
     $zoneText = Get-ObjectPropertyValue -Object $job -Name 'zone' -Default 0
@@ -1001,20 +1001,20 @@ function Main {
     }
 
     $staffCode = $branchPrefix.TrimEnd('/')
-    $toolsDir = Join-Path $ratatoskRoot 'tools'
-    $agentsDir = Join-Path $ratatoskRoot 'agents'
+    $toolsDir = Join-Path $autotaskRoot 'tools'
+    $agentsDir = Join-Path $autotaskRoot 'agents'
     $startedAt = (Get-Date).ToUniversalTime().ToString('o')
     $startedAtLocal = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
 
     $promptContent = @"
-You are Ratatosk Task Worker for $resolvedJobNumber ($taskType).
+You are Autotask Task Worker for $resolvedJobNumber ($taskType).
 Read your full instructions from ``$agentsDir\task-worker.md``.
 Your workspace is $workspaceRelativePath.
-Ratatosk root is $ratatoskRoot.
+Autotask root is $autotaskRoot.
 Your job number is $resolvedJobNumber, task sequence is $taskSequence, task type is $taskType, zone is $zone, staff code is $staffCode.
 Task started at: $startedAtLocal (local time) — use this exact string when appending the [${staffCode}] Started: note to ediProd task notes, do NOT call Get-Date for the start time.
 Task description: $description
-Workspace mode: $workspaceMode$(if ($workspaceMode -eq 'reference') { " - repos are read-only references in git_source_root; see .ratatosk\repo-paths.json for paths. Do NOT clone repos. If you discover code changes are needed, request user input before proceeding." } else { " - clone each repo from git_source_root during Phase 1 workspace setup." })
+Workspace mode: $workspaceMode$(if ($workspaceMode -eq 'reference') { " - repos are read-only references in git_source_root; see .autotask\repo-paths.json for paths. Do NOT clone repos. If you discover code changes are needed, request user input before proceeding." } else { " - clone each repo from git_source_root during Phase 1 workspace setup." })
 Git source root: $gitSourceRootPath
 Existing PR URLs: $(if ($existingPrUrls.Count -gt 0) { $existingPrUrls -join ', ' } else { '(none)' })
 Preferred repo branches: $(if ([string]::IsNullOrWhiteSpace($repoBranchSummary)) { "(default $branchPrefix/ branch)" } else { $repoBranchSummary })
@@ -1022,11 +1022,11 @@ Selected repos: $($repos -join ', ')
 Repo selection: $(if (-not [string]::IsNullOrWhiteSpace([string]$repoSelection.repoGroup)) { "$($repoSelection.repoGroup) ($($repoSelection.selectionMode))" } else { [string]$repoSelection.selectionMode })
 Repo selection reason: $([string]$repoSelection.reason)
 Keep the existing terminal tab title exactly as launched. Do not rename the terminal tab or set an application title.
-Publish your live activity via ``$toolsDir\set-ratatosk-worker-activity.ps1`` using granular statuses such as starting, workspace-verify, syncing, planning, thinking, researching, triaging, designing, implementing, coding, building, validating, testing, documenting, reviewing, creating-pr, waiting-review, awaiting-user-input, input-received, retrying, blocked, completed, and failed. Update it often whenever your actual work changes.
-When you choose a build/test scope or reuse/download shared Crikey artifacts, record it with ``$toolsDir\update-ratatosk-build-plan.ps1`` so Ratatosk can track targeted plans and shared artifact usage.
-If a build or test failure appears unrelated to your targeted scope, environment, or baseline artifacts, run ``$toolsDir\classify-ratatosk-build-failure.ps1`` before finalizing so the failure is labelled correctly.
-If you need a user decision, use ``$toolsDir\request-ratatosk-user-input.ps1`` and then wait with ``$toolsDir\wait-for-ratatosk-user-input.ps1``.
-When you finish or fail, do not stop silently. Run ``$toolsDir\finalize-ratatosk-worker.ps1 -TaskSequence $taskSequence`` (when task sequence is known) so Ratatosk always captures a final report, updates temp/state.json, and sends the completion or failure report.
+Publish your live activity via ``$toolsDir\set-autotask-worker-activity.ps1`` using granular statuses such as starting, workspace-verify, syncing, planning, thinking, researching, triaging, designing, implementing, coding, building, validating, testing, documenting, reviewing, creating-pr, waiting-review, awaiting-user-input, input-received, retrying, blocked, completed, and failed. Update it often whenever your actual work changes.
+When you choose a build/test scope or reuse/download shared Crikey artifacts, record it with ``$toolsDir\update-autotask-build-plan.ps1`` so Autotask can track targeted plans and shared artifact usage.
+If a build or test failure appears unrelated to your targeted scope, environment, or baseline artifacts, run ``$toolsDir\classify-autotask-build-failure.ps1`` before finalizing so the failure is labelled correctly.
+If you need a user decision, use ``$toolsDir\request-autotask-user-input.ps1`` and then wait with ``$toolsDir\wait-for-autotask-user-input.ps1``.
+When you finish or fail, do not stop silently. Run ``$toolsDir\finalize-autotask-worker.ps1 -TaskSequence $taskSequence`` (when task sequence is known) so Autotask always captures a final report, updates temp/state.json, and sends the completion or failure report.
 Begin work immediately.
 "@
     Write-Utf8File -Path $promptFilePath -Content $promptContent
@@ -1060,9 +1060,9 @@ Begin work immediately.
         retryCount = $retryCount
         activityStatus = 'starting'
         activityMessage = 'Launching worker from dashboard start.'
-        artifactUsage = New-RatatoskArtifactUsage -Branch $effectiveBranchName -Timestamp $startedAt
-        buildPlan = New-RatatoskBuildPlan -Timestamp $startedAt
-        buildFailure = New-RatatoskBuildFailure
+        artifactUsage = New-AutotaskArtifactUsage -Branch $effectiveBranchName -Timestamp $startedAt
+        buildPlan = New-AutotaskBuildPlan -Timestamp $startedAt
+        buildFailure = New-AutotaskBuildFailure
         lastHeartbeatAt = $startedAt
         lastUpdated = $startedAt
     }
@@ -1071,30 +1071,30 @@ Begin work immediately.
     $originalFailedJobs = @($state.failedJobs)
     $originalWorkers = @($state.workers)
 
-    $jobKey = Get-RatatoskJobObjectKey -Job $job
-    $state.waitingQueue = @($state.waitingQueue | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $jobKey })
-    $state.failedJobs = @($state.failedJobs | Where-Object { (Get-RatatoskJobObjectKey -Job $_) -ne $jobKey })
+    $jobKey = Get-AutotaskJobObjectKey -Job $job
+    $state.waitingQueue = @($state.waitingQueue | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $jobKey })
+    $state.failedJobs = @($state.failedJobs | Where-Object { (Get-AutotaskJobObjectKey -Job $_) -ne $jobKey })
     $state.workers = @($state.workers) + $worker
-    Write-RatatoskState -State $state
+    Write-AutotaskState -State $state
 
     $launchResult = $null
     try {
         if (-not $NoLaunch) {
-            $launchResult = & (Join-Path $PSScriptRoot 'launch-ratatosk-worker.ps1') `
+            $launchResult = & (Join-Path $PSScriptRoot 'launch-autotask-worker.ps1') `
                 -Cli $workerCli `
                 -JobNumber $resolvedJobNumber `
                 -TaskType $taskType `
                 -Zone $zone `
                 -WorkspacePath $workspacePath `
                 -PromptFile $promptFilePath `
-                -PluginDir $ratatoskRoot `
+                -PluginDir $autotaskRoot `
                 -PassThru
         }
     } catch {
         $state.waitingQueue = $originalWaitingQueue
         $state.failedJobs = $originalFailedJobs
         $state.workers = $originalWorkers
-        Write-RatatoskState -State $state
+        Write-AutotaskState -State $state
         throw
     }
 

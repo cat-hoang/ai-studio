@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory)]
     [string]$JsonPayload
 )
@@ -11,8 +11,8 @@ $templateName = $data.templateName
 $tplData = $data.data
 
 # Read config
-$ratatoskRoot = Split-Path -Parent $PSScriptRoot
-$configPath = Join-Path $ratatoskRoot 'config.local.yaml'
+$autotaskRoot = Split-Path -Parent $PSScriptRoot
+$configPath = Join-Path $autotaskRoot 'config.local.yaml'
 $configContent = Get-Content $configPath -Raw
 
 function Get-YamlValue($content, $key) {
@@ -24,8 +24,8 @@ function Get-YamlValue($content, $key) {
 
 $smtpFrom = Get-YamlValue $configContent 'smtp_from'
 $smtpTo   = Get-YamlValue $configContent 'smtp_to'
-$statePath = Join-Path $ratatoskRoot 'temp\state.json'
-$linkCommonPath = Join-Path $PSScriptRoot 'ratatosk-ediprod-link-common.ps1'
+$statePath = Join-Path $autotaskRoot 'temp\state.json'
+$linkCommonPath = Join-Path $PSScriptRoot 'autotask-ediprod-link-common.ps1'
 
 if ([string]::IsNullOrWhiteSpace($smtpFrom)) { throw 'smtp_from is empty' }
 if ([string]::IsNullOrWhiteSpace($smtpTo))   { throw 'smtp_to is empty' }
@@ -36,7 +36,7 @@ if (-not (Test-Path -LiteralPath $linkCommonPath)) { throw "Shared ediProd link 
 $tenantId = '8b493985-e1b4-4b95-ade6-98acafdbdb01'
 $clientId = 'd3590ed6-52b3-4102-aeff-aad2292ab01c'  # Microsoft Office first-party app
 $scope    = 'https://graph.microsoft.com/Mail.Send offline_access'
-$tokenCachePath = Join-Path $ratatoskRoot '.oauth-token-cache.json'
+$tokenCachePath = Join-Path $autotaskRoot '.oauth-token-cache.json'
 
 function Get-GraphAccessToken {
     if (Test-Path $tokenCachePath) {
@@ -142,7 +142,7 @@ switch ($templateName) {
         } else {
             ''
         }
-        $subject = "Ratatosk: $($tplData.jobNumber) - $($tplData.status)"
+        $subject = "Autotask: $($tplData.jobNumber) - $($tplData.status)"
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;">' +
             "<h2>Task Summary: $($tplData.jobNumber)</h2>" +
             '<table style="border-collapse:collapse;width:100%;max-width:600px;">' +
@@ -158,7 +158,7 @@ switch ($templateName) {
     'task-started' {
         $jobTitle = if ($tplData.PSObject.Properties['jobTitle']) { [string]$tplData.jobTitle } else { '' }
         $jobLabel = if (-not [string]::IsNullOrWhiteSpace($jobTitle)) { "$($tplData.jobNumber) · $([System.Net.WebUtility]::HtmlEncode($jobTitle))" } else { $tplData.jobNumber }
-        $subject = "Ratatosk: $($tplData.jobNumber) - Started"
+        $subject = "Autotask: $($tplData.jobNumber) - Started"
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;">' +
             '<div style="background-color:#dff6dd;border-left:4px solid #107c10;padding:12px;margin-bottom:16px;">' +
             '<h2 style="color:#107c10;margin-top:0;">Task Started</h2></div>' +
@@ -182,9 +182,9 @@ switch ($templateName) {
                     "<td style='padding:6px;border:1px solid #ddd;'>$($_.failedCount)</td></tr>"
             }
         }
-        $subject = "Ratatosk Daily Report - $($tplData.date)"
+        $subject = "Autotask Daily Report - $($tplData.date)"
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;">' +
-            "<h2>Ratatosk Daily Report - $($tplData.date)</h2>" +
+            "<h2>Autotask Daily Report - $($tplData.date)</h2>" +
             "<p><strong>Completed:</strong> $($tplData.totalCompleted) | <strong>Failed:</strong> $($tplData.totalFailed) | <strong>Queued:</strong> $($tplData.totalQueued)</p>" +
             '<table style="border-collapse:collapse;width:100%;">' +
             '<thead><tr style="background-color:#0078d4;color:white;">' +
@@ -198,7 +198,7 @@ switch ($templateName) {
     }
     'failed-alert' {
         $logText = if ($tplData.logs) { [System.Net.WebUtility]::HtmlEncode($tplData.logs) } else { '(no logs)' }
-        $subject = "Ratatosk Task Failed: $($tplData.jobNumber)"
+        $subject = "Autotask Task Failed: $($tplData.jobNumber)"
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;">' +
             '<div style="background-color:#fde7e9;border-left:4px solid #d13438;padding:12px;margin-bottom:16px;">' +
             '<h2 style="color:#d13438;margin-top:0;">Task Failed</h2></div>' +
@@ -218,10 +218,10 @@ switch ($templateName) {
             $optionsHtml = ($tplData.options | ForEach-Object { "<li>$([System.Net.WebUtility]::HtmlEncode($_))</li>" }) -join ''
         }
         $questionHtml = [System.Net.WebUtility]::HtmlEncode($tplData.question)
-        $subject = "Ratatosk Input Needed: $($tplData.jobNumber) [$($tplData.requestId)]"
+        $subject = "Autotask Input Needed: $($tplData.jobNumber) [$($tplData.requestId)]"
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;">' +
             '<div style="background-color:#fff4ce;border-left:4px solid #ffb900;padding:12px;margin-bottom:16px;">' +
-            '<h2 style="margin-top:0;">Ratatosk needs your input</h2></div>' +
+            '<h2 style="margin-top:0;">Autotask needs your input</h2></div>' +
             '<table style="border-collapse:collapse;width:100%;max-width:700px;">' +
             "<tr><td style='padding:6px;font-weight:bold;'>Job Number</td><td style='padding:6px;'>$(Get-EdiProdLinkHtml -JobNumber $tplData.jobNumber -JobGuid $tplData.jobGuid)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Task Sequence</td><td style='padding:6px;'>$($tplData.taskSequence)</td></tr>" +
@@ -237,7 +237,7 @@ switch ($templateName) {
             '<h3>How to respond</h3>' +
             '<ol>' +
             '<li>Reply to this email and keep the subject unchanged, or</li>' +
-            "<li>Use the Ratatosk dashboard command bar: <code>reply $($tplData.jobNumber) your answer</code></li>" +
+            "<li>Use the Autotask dashboard command bar: <code>reply $($tplData.jobNumber) your answer</code></li>" +
             '</ol>' +
             '</body></html>'
     }
@@ -260,7 +260,7 @@ switch ($templateName) {
                 $seqBadge = if (-not [string]::IsNullOrWhiteSpace($seq)) { " <span style='padding:1px 6px;border-radius:999px;background:#f6f3ff;color:#53389e;font-size:11px;'>Task $seq</span>" } else { '' }
                 $naBadge = if ([bool]$_.neverAutoStart) { " <span style='padding:1px 6px;border-radius:999px;background:#fdf4ff;color:#c026d3;font-size:11px;'>🚫 Never Auto</span>" } else { '' }
                 $cmdHtml = if ($showCmd) {
-                    $cmdText = Local-Safe "ratatosk: start $($_.jobNumber)$(if (-not [string]::IsNullOrWhiteSpace($seq)) { " --task $seq" })"
+                    $cmdText = Local-Safe "autotask: start $($_.jobNumber)$(if (-not [string]::IsNullOrWhiteSpace($seq)) { " --task $seq" })"
                     "<br><code style='background:#f8f9fa;padding:2px 5px;font-size:12px;'>$cmdText</code>"
                 } else { '' }
                 $actLabel = if ($_.activityStatus) { " <span style='color:#667085;'>($(Local-Safe $_.activityStatus))</span>" } else { '' }
@@ -273,9 +273,9 @@ switch ($templateName) {
         } else { '' }
 
         $countLine = if ($counts) { "Startable: $($counts.startableJobs)  ·  Queue: $($counts.waitingQueue)  ·  Workers: $($counts.workers)  ·  Completed: $($counts.completedJobs)  ·  Failed: $($counts.failedJobs)" } else { '' }
-        $subject = "Ratatosk Status: $countLine"
+        $subject = "Autotask Status: $countLine"
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;max-width:720px;">' +
-            '<h2 style="margin-bottom:4px;">📊 Ratatosk Status</h2>' +
+            '<h2 style="margin-bottom:4px;">📊 Autotask Status</h2>' +
             "<p style='color:#667085;'>$(Local-Safe $countLine)</p>" +
             $neverAutoNote +
             "<h3 style='margin:20px 0 6px;'>⚡ Startable Tasks</h3><ul style='margin:0;padding:0;'>" + (Local-Row $startable $true) + '</ul>' +

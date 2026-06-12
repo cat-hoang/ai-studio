@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [int]$Top = 60
 )
@@ -6,7 +6,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 . (Join-Path $PSScriptRoot 'teams-chat-common.ps1')
 
 function ConvertTo-TeamsPollResult {
@@ -130,7 +130,7 @@ function Get-CommandTextFromTeamsMessage {
     }
 
     $trimmedText = $trimmedText.Trim()
-    $normalizedPrefix = if ([string]::IsNullOrWhiteSpace($Prefix)) { 'ratatosk:' } else { $Prefix.Trim() }
+    $normalizedPrefix = if ([string]::IsNullOrWhiteSpace($Prefix)) { 'autotask:' } else { $Prefix.Trim() }
     if (-not $trimmedText.StartsWith($normalizedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
         return ''
     }
@@ -155,7 +155,7 @@ function Send-TeamsCommandReply {
     )
 
     try {
-        Invoke-RatatoskTeamsChat -Action 'send-message'-Settings $Settings -ConversationId $ConversationId -Content $Text -Format 'markdown' | Out-Null
+        Invoke-AutotaskTeamsChat -Action 'send-message'-Settings $Settings -ConversationId $ConversationId -Content $Text -Format 'markdown' | Out-Null
     } catch {
         $Warnings.Add("Failed to send Teams command reply: $($_.Exception.Message)")
     }
@@ -183,7 +183,7 @@ function Invoke-TeamsCommand {
     $sourceMessageId= [string](Get-MessageFieldValue -Message $Message -Name 'id')
     $commandMessageId = "teams:${ConversationId}:${sourceMessageId}"
     $senderDisplayName = [string](Get-MessageFieldValue -Message $Message -Name 'senderDisplayName')
-    $commandScriptPath = Join-Path $PSScriptRoot 'invoke-ratatosk-command.ps1'
+    $commandScriptPath = Join-Path $PSScriptRoot 'invoke-autotask-command.ps1'
     $commandOutput = & $commandScriptPath -CommandText $CommandText -Source 'teams-command-poller' -Responder $senderDisplayName -MessageId $commandMessageId 2>&1 | Out-String
 
     try {
@@ -194,14 +194,14 @@ function Invoke-TeamsCommand {
             duplicate = $false
             action = ''
             jobNumber = ''
-            message = 'Ratatosk command failed.'
+            message = 'Autotask command failed.'
             error = "Command handler returned invalid JSON: $commandOutput"
         }
     }
 
     if ($Settings.commandSendReplies -and -not [bool]$commandResult.duplicate) {
         if ($commandResult.success) {
-            $replyText = ('{0} Command ok: `{1}`' -f (Get-RatatoskTeamsNotificationPrefix), $CommandText)
+            $replyText = ('{0} Command ok: `{1}`' -f (Get-AutotaskTeamsNotificationPrefix), $CommandText)
             # For status commands, use the rich per-item markdown report when available
             $statusReport = ''
             if ([string]$commandResult.action -eq 'status') {
@@ -230,7 +230,7 @@ function Invoke-TeamsCommand {
             }
             Send-TeamsCommandReply -Settings $Settings -ConversationId $ConversationId -Text $replyText -Warnings $Warnings
         } else {
-            $replyText = ('{0} Command failed: `{1}`' -f (Get-RatatoskTeamsNotificationPrefix), $CommandText)
+            $replyText = ('{0} Command failed: `{1}`' -f (Get-AutotaskTeamsNotificationPrefix), $CommandText)
             if (-not [string]::IsNullOrWhiteSpace([string]$commandResult.error)) {
                 $replyText += ("`n" + [string]$commandResult.error)
             }
@@ -272,21 +272,21 @@ function Invoke-TeamsCommand {
 }
 
 function Main {
-    $settings = Get-RatatoskTeamsChatSettings
-    $disabledReason = Get-RatatoskTeamsChatDisabledReason -Settings $settings -ForCommandPolling
+    $settings = Get-AutotaskTeamsChatSettings
+    $disabledReason = Get-AutotaskTeamsChatDisabledReason -Settings $settings -ForCommandPolling
     if (-not [string]::IsNullOrWhiteSpace($disabledReason)) {
         ConvertTo-TeamsPollResult -Disabled $true -DisabledReason $disabledReason | ConvertTo-Json -Depth 20
         return
     }
 
-    $state = Read-RatatoskState
-    $cachedConversation = Get-RatatoskTeamsChatConversationCache -State $state -Settings $settings
+    $state = Read-AutotaskState
+    $cachedConversation = Get-AutotaskTeamsChatConversationCache -State $state -Settings $settings
     $conversationId = if ($cachedConversation) { [string]$cachedConversation.conversationId } else { '' }
-    $pollResult = Invoke-RatatoskTeamsChat -Action 'get-messages' -Settings $settings -ConversationId $conversationId -Limit $Top
-    Set-RatatoskTeamsChatConversationCache -State $state -Settings $settings -ConversationId ([string]$pollResult.conversationId) -TargetDescription ([string]$pollResult.targetDescription)
-    Set-RatatoskProperty -Object (Get-RatatoskTeamsChatState -State $state) -Name 'lastPollAt' -Value ((Get-Date).ToUniversalTime().ToString('o'))
+    $pollResult = Invoke-AutotaskTeamsChat -Action 'get-messages' -Settings $settings -ConversationId $conversationId -Limit $Top
+    Set-AutotaskTeamsChatConversationCache -State $state -Settings $settings -ConversationId ([string]$pollResult.conversationId) -TargetDescription ([string]$pollResult.targetDescription)
+    Set-AutotaskProperty -Object (Get-AutotaskTeamsChatState -State $state) -Name 'lastPollAt' -Value ((Get-Date).ToUniversalTime().ToString('o'))
 
-    $cursor = Get-RatatoskTeamsChatCursor -State $state
+    $cursor = Get-AutotaskTeamsChatCursor -State $state
     $messages = @(
         @($pollResult.messages) | Where-Object {
             $_ -and
@@ -297,7 +297,7 @@ function Main {
     $warnings = New-Object System.Collections.Generic.List[string]
     $commandsProcessed = New-Object System.Collections.Generic.List[object]
     $rejectedCommands = New-Object System.Collections.Generic.List[object]
-    $notificationPrefix = Get-RatatoskTeamsNotificationPrefix
+    $notificationPrefix = Get-AutotaskTeamsNotificationPrefix
 
     foreach ($message in $newMessages) {
         $textContent = [string](Get-MessageFieldValue -Message $message -Name 'textContent')
@@ -334,14 +334,14 @@ function Main {
 
     if ($newMessages.Count -gt 0) {
         $lastSeenMessage = $newMessages[$newMessages.Count - 1]
-        Set-RatatoskTeamsChatCursor `
+        Set-AutotaskTeamsChatCursor `
             -State $state `
             -ConversationId ([string]$pollResult.conversationId) `
             -LastProcessedMessageId ([string](Get-MessageFieldValue -Message $lastSeenMessage -Name 'id')) `
             -LastProcessedArrivalTime ([string](Get-MessageFieldValue -Message $lastSeenMessage -Name 'originalArrivalTime'))
     }
 
-    Write-RatatoskState -State $state
+    Write-AutotaskState -State $state
 
     ConvertTo-TeamsPollResult `
         -ConversationId ([string]$pollResult.conversationId) `

@@ -1,15 +1,15 @@
-const http = require('http');
+﻿const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { exec, execFile } = require('child_process');
 
 // --- Config ---
-const RATATOSK_DIR = path.resolve(process.env.RATATOSK_ROOT || path.join(__dirname, '..'));
-const CONFIG_PATH = path.join(RATATOSK_DIR, 'config.yaml');
-const LOCAL_CONFIG_PATH = path.join(RATATOSK_DIR, 'config.local.yaml');
-const STATE_PATH = path.join(RATATOSK_DIR, 'temp', 'state.json');
-const DASHBOARD_DIR = path.join(RATATOSK_DIR, 'dashboard');
+const AUTOTASK_DIR = path.resolve(process.env.AUTOTASK_ROOT || path.join(__dirname, '..'));
+const CONFIG_PATH = path.join(AUTOTASK_DIR, 'config.yaml');
+const LOCAL_CONFIG_PATH = path.join(AUTOTASK_DIR, 'config.local.yaml');
+const STATE_PATH = path.join(AUTOTASK_DIR, 'temp', 'state.json');
+const DASHBOARD_DIR = path.join(AUTOTASK_DIR, 'dashboard');
 const COMPLETED_STATUSES = new Set(['done', 'completed', 'complete', 'success', 'succeeded']);
 const COMPLETED_PHASES = new Set(['done', 'completed', 'complete']);
 const FAILED_STATUSES = new Set(['failed', 'error']);
@@ -434,10 +434,10 @@ function normalizeTaskRecords(tasks) {
     });
 }
 
-function resolveRatatoskPath(value) {
+function resolveAutotaskPath(value) {
   if (!isNonEmptyString(value)) return '';
   const trimmed = value.trim();
-  return path.isAbsolute(trimmed) ? trimmed : path.join(RATATOSK_DIR, trimmed);
+  return path.isAbsolute(trimmed) ? trimmed : path.join(AUTOTASK_DIR, trimmed);
 }
 
 function getEdiProdHttpsLink() {
@@ -755,7 +755,7 @@ function resolveJobRepoSelection(job, batchingConfig) {
 
 function getWorkspaceCost(job, repoCount) {
   const relativeWorkspacePath = firstNonEmptyString(job && job.workspacePath, (job && (job.issueId || job.jobNumber)) ? path.join('workspaces', job.issueId || job.jobNumber) : '');
-  const resolvedWorkspacePath = resolveRatatoskPath(relativeWorkspacePath);
+  const resolvedWorkspacePath = resolveAutotaskPath(relativeWorkspacePath);
   if (resolvedWorkspacePath && fs.existsSync(resolvedWorkspacePath)) {
     return { label: 'reuse workspace', score: 18, path: relativeWorkspacePath };
   }
@@ -1104,7 +1104,7 @@ function getTerminalSummary(job) {
     job.activityMessage,
     job.summary,
     job.description,
-    `Worker reached terminal state without running the Ratatosk finalizer.`
+    `Worker reached terminal state without running the Autotask finalizer.`
   );
 }
 
@@ -1125,7 +1125,7 @@ function markJobAsReported(jobNumber, taskSequence, bucketName, summary, timesta
 }
 
 function ensureTerminalNotifications(state) {
-  const failureScript = path.join(RATATOSK_DIR, 'tools', 'send-task-failure-notifications.ps1');
+  const failureScript = path.join(AUTOTASK_DIR, 'tools', 'send-task-failure-notifications.ps1');
   if (!fs.existsSync(failureScript)) return;
 
   for (const job of asArray(state.failedJobs)) {
@@ -1425,7 +1425,7 @@ function maybeRunAutoLaunchCycle() {
   });
 
   // Launch all queued candidates in parallel
-  const commandScript = path.join(RATATOSK_DIR, 'tools', 'invoke-ratatosk-command.ps1');
+  const commandScript = path.join(AUTOTASK_DIR, 'tools', 'invoke-autotask-command.ps1');
   let launchCount = 0;
   let failureCount = 0;
 
@@ -1763,7 +1763,7 @@ async function handleCommand(req, res) {
       });
     }
 
-    const scriptPath = path.join(RATATOSK_DIR, 'tools', 'invoke-ratatosk-command.ps1');
+    const scriptPath = path.join(AUTOTASK_DIR, 'tools', 'invoke-autotask-command.ps1');
     const args = ['-CommandText', String(command), '-Source', firstNonEmptyString(source, 'dashboard-command')];
     if (responder) args.push('-Responder', String(responder));
 
@@ -1794,8 +1794,8 @@ async function handleCommand(req, res) {
       // runPowerShellFile is non-blocking so these fire after the response is already sent.
       if (result.action === 'status' && result.data && result.data.statusReport) {
         const broadcastPayload = JSON.stringify({ templateName: 'status-report', data: result.data });
-        const teamsScript = path.join(RATATOSK_DIR, 'tools', 'send-teams-notification.ps1');
-        const emailScript = path.join(RATATOSK_DIR, 'tools', 'send-email-notification.ps1');
+        const teamsScript = path.join(AUTOTASK_DIR, 'tools', 'send-teams-notification.ps1');
+        const emailScript = path.join(AUTOTASK_DIR, 'tools', 'send-email-notification.ps1');
         const commandSource = firstNonEmptyString(source, 'dashboard-command');
 
         if (commandSource !== 'teams-command-poller') {
@@ -1855,7 +1855,7 @@ async function handleGetTaskNotes(req, res) {
     if (!/^(WI|CS|PRJ)\d{8}$/.test(jobNumber)) return sendError(res, 400, 'Valid jobNumber required.');
     if (!taskSequence) return sendError(res, 400, 'taskSequence required.');
 
-    const scriptPath = path.join(RATATOSK_DIR, 'tools', 'get-ratatosk-task-notes.ps1');
+    const scriptPath = path.join(AUTOTASK_DIR, 'tools', 'get-autotask-task-notes.ps1');
     const args = ['-JobNumber', jobNumber, '-TaskSequence', taskSequence];
     runPowerShellFile(scriptPath, args, (err, stdout) => {
       if (err) return sendJson(res, 200, { success: false, error: err.message });
@@ -1881,7 +1881,7 @@ async function handleSetTaskNotes(req, res) {
     if (!taskSequence) return sendError(res, 400, 'taskSequence required.');
     if (content === null) return sendError(res, 400, 'content required.');
 
-    const scriptPath = path.join(RATATOSK_DIR, 'tools', 'set-ratatosk-task-notes.ps1');
+    const scriptPath = path.join(AUTOTASK_DIR, 'tools', 'set-autotask-task-notes.ps1');
     const args = ['-JobNumber', jobNumber, '-TaskSequence', taskSequence, '-Content', content];
     runPowerShellFile(scriptPath, args, (err, stdout) => {
       if (err) return sendJson(res, 200, { success: false, error: err.message });
@@ -1938,7 +1938,7 @@ async function handleSubmitInput(req, res) {
     if (!jobNumber) return sendError(res, 400, 'jobNumber required');
     if (!response || !String(response).trim()) return sendError(res, 400, 'response required');
 
-    const scriptPath = path.join(RATATOSK_DIR, 'tools', 'submit-ratatosk-user-input.ps1');
+    const scriptPath = path.join(AUTOTASK_DIR, 'tools', 'submit-autotask-user-input.ps1');
     const args = ['-JobNumber', jobNumber, '-Response', String(response)];
     if (firstNonEmptyString(taskSequence)) args.push('-TaskSequence', String(taskSequence));
     if (requestId) args.push('-RequestId', requestId);
@@ -1968,7 +1968,7 @@ async function handleSubmitInput(req, res) {
 async function handleTeamsNotify(req, res) {
   try {
     const body = await parseBody(req);
-    const toolsDir = path.join(RATATOSK_DIR, 'tools');
+    const toolsDir = path.join(AUTOTASK_DIR, 'tools');
     runPowerShellFile(path.join(toolsDir, 'send-teams-notification.ps1'), ['-JsonPayload', JSON.stringify(body)], (err, stdout, stderr) => {
       if (err) {
         console.error('[teams-notify] Error: ' + err.message);
@@ -1984,7 +1984,7 @@ async function handleTeamsNotify(req, res) {
 async function handleEmailNotify(req, res) {
   try {
     const body = await parseBody(req);
-    const toolsDir = path.join(RATATOSK_DIR, 'tools');
+    const toolsDir = path.join(AUTOTASK_DIR, 'tools');
     runPowerShellFile(path.join(toolsDir, 'send-email-notification.ps1'), ['-JsonPayload', JSON.stringify(body)], (err, stdout, stderr) => {
       if (err) {
         console.error('[email-notify] Error: ' + err.message);
@@ -2087,7 +2087,7 @@ function startEmailReplyPoller() {
     return;
   }
 
-  const pollScript = path.join(RATATOSK_DIR, 'tools', 'poll-ratatosk-email-input.ps1');
+  const pollScript = path.join(AUTOTASK_DIR, 'tools', 'poll-autotask-email-input.ps1');
   if (!fs.existsSync(pollScript)) {
     emailPollStatus.running = false;
     emailPollStatus.timerActive = false;
@@ -2206,7 +2206,7 @@ function startTeamsCommandPoller() {
     return;
   }
 
-  const pollScript = path.join(RATATOSK_DIR, 'tools', 'poll-ratatosk-teams-input.ps1');
+  const pollScript = path.join(AUTOTASK_DIR, 'tools', 'poll-autotask-teams-input.ps1');
   if (!fs.existsSync(pollScript)) {
     teamsCommandPollStatus.running = false;
     teamsCommandPollStatus.timerActive = false;
@@ -2313,7 +2313,7 @@ function startStartableJobsPoller() {
   startablePollStatus.lastError = '';
   startablePollStatus.disabledReason = '';
 
-  const pollScript = path.join(RATATOSK_DIR, 'tools', 'get-ratatosk-startable-jobs.ps1');
+  const pollScript = path.join(AUTOTASK_DIR, 'tools', 'get-autotask-startable-jobs.ps1');
   if (!fs.existsSync(pollScript)) {
     startablePollStatus.running = false;
     startablePollStatus.timerActive = false;
@@ -2458,7 +2458,7 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = readPort();
 server.listen(PORT, () => {
-  console.log('Ratatosk dashboard listening on http://localhost:' + PORT);
+  console.log('Autotask dashboard listening on http://localhost:' + PORT);
   console.log('State file: ' + STATE_PATH);
   startEmailReplyPoller();
   startTeamsCommandPoller();

@@ -1,4 +1,4 @@
-# QGL CLI Build
+﻿# QGL CLI Build
 
 ## Purpose
 
@@ -27,7 +27,7 @@ Relevant config keys:
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `workspacePath` | Yes | — | Root of the CW workspace to build, e.g. `C:\BS\ratatosk\workspaces\WI00971062\CargoWise` |
+| `workspacePath` | Yes | — | Root of the CW workspace to build, e.g. `C:\BS\autotask\workspaces\WI00971062\CargoWise` |
 | `branch` | Yes | — | Branch to check out and build, e.g. `ABC/WI00971062` |
 | `maxThreadCount` | No | `10` | Parallel build thread count |
 | `configuration` | No | `Debug` | MSBuild configuration |
@@ -48,7 +48,7 @@ If not installed, it can also be downloaded from ProGet. The version tag is in `
 ```
 DATProduction/CrikeyClient/QGL/QGL-20260209-043543.zip
 ```
-Download and extract to `C:\BS\ratatosk\tools\QGL-CLI\`.
+Download and extract to `C:\BS\autotask\tools\QGL-CLI\`.
 
 ### Step 2: Copy CLI to a local writeable folder and sync DLLs from GUI
 
@@ -60,7 +60,7 @@ InvalidOperationException: Sequence contains more than one element
 
 ```powershell
 $cliSrc = "C:\Program Files (x86)\WiseTech Global\CrikeyMonitor\QGL"
-$cliDst = "C:\BS\ratatosk\tools\QGL-CLI"
+$cliDst = "C:\BS\autotask\tools\QGL-CLI"
 $guiDir = "C:\Program Files (x86)\WiseTech Global\Quick Get Latest"
 
 # One-time copy
@@ -85,7 +85,7 @@ After upgrading the installed GUI QGL, repeat the DLL sync step to keep the loca
 
 The local copy is the path to use. Optionally record in `config.local.yaml`:
 ```yaml
-qgl_cli_exe: "C:\\BS\\ratatosk\\tools\\QGL-CLI\\QuickGetLatest.exe"
+qgl_cli_exe: "C:\\BS\\autotask\\tools\\QGL-CLI\\QuickGetLatest.exe"
 ```
 
 ## Execution Steps
@@ -124,7 +124,7 @@ Set-Content -Path (Join-Path (Split-Path $workspacePath) "qgl-current-log.txt") 
 ### Step 4: Run QGL CLI headlessly
 
 ```powershell
-$qglExe = "C:\BS\ratatosk\tools\QGL-CLI\QuickGetLatest.exe"   # local copy with synced DLLs
+$qglExe = "C:\BS\autotask\tools\QGL-CLI\QuickGetLatest.exe"   # local copy with synced DLLs
 
 & $qglExe `
     -NoGui `

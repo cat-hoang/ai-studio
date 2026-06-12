@@ -1,7 +1,7 @@
-module.exports = {
+﻿module.exports = {
   apps: [
     {
-      name: 'ratatosk-dashboard',
+      name: 'autotask-dashboard',
       script: './server.js',
       cwd: __dirname,
       instances: 1,

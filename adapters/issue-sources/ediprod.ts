@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ediProd legacy adapter — thin TypeScript wrapper around the existing
  * query-bm-startable.ts + PAVE API pipeline.
  *
@@ -8,7 +8,7 @@
  * through the same IssueSourceAdapter interface as every other backend.
  *
  * When issue_source.adapter is set to "ediprod" in config.yaml, the PS1
- * get-ratatosk-startable-jobs.ps1 falls through to its built-in ediprod path
+ * get-autotask-startable-jobs.ps1 falls through to its built-in ediprod path
  * and this file is NOT executed.
  *
  * Config section (config.yaml / config.local.yaml):
@@ -75,7 +75,7 @@ export const ediprodAdapter: IssueSourceAdapter = {
 
   async appendNote(issueId: string, note: string, _config: AdapterConfig): Promise<void> {
     const repoRoot = path.resolve(import.meta.dirname, '..', '..');
-    const scriptPath = path.join(repoRoot, 'tools', 'ratatosk-task-notes.ts');
+    const scriptPath = path.join(repoRoot, 'tools', 'autotask-task-notes.ts');
 
     const proc = Bun.spawn(
       ['bun', scriptPath, '--action', 'append', '--task', issueId, '--note', note],

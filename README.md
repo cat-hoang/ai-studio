@@ -1,10 +1,10 @@
-# Ratatosk
+﻿# Autotask
 
 **Multi-agent task orchestrator that turns your development backlog into pull requests — autonomously.**
 
-Ratatosk fetches open issues from your configured issue source (GitHub Issues, Linear, Jira, or a local file), spins up isolated AI workers in dedicated terminal tabs, and delivers tested PRs — all while keeping you in control through a live dashboard, Teams chat, or email.
+Autotask fetches open issues from your configured issue source (GitHub Issues, Linear, Jira, or a local file), spins up isolated AI workers in dedicated terminal tabs, and delivers tested PRs — all while keeping you in control through a live dashboard, Teams chat, or email.
 
-## Why Ratatosk?
+## Why Autotask?
 
 - **Hands-off, not eyes-off.** Workers run autonomously through the full lifecycle — workspace setup, build, code, test, PR — while you monitor progress from the Kanban dashboard, Teams, or your inbox.
 - **Multi-channel command & control.** Issue commands from the dashboard UI, email, or Teams direct chat. Get notified the same way. No CLI session required.
@@ -53,8 +53,8 @@ flowchart LR
 
 ```powershell
 # 1. Clone and install
-git clone https://github.com/your-org/ratatosk.git
-cd ratatosk
+git clone https://github.com/your-org/autotask.git
+cd autotask
 .\setup\install.ps1
 
 # 2. Edit your local config
@@ -67,18 +67,18 @@ pm2 start dashboard/ecosystem.config.js
 
 # 4. Launch the orchestrator
 #    From Claude Code or Copilot CLI:
-/ratatosk-start
+/autotask-start
 ```
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/ratatosk-start` | Fetch issues from the configured source, select, and spawn workers |
-| `/ratatosk-status` | Show queue, active workers, and completed jobs |
-| `/ratatosk-queue` | Add a task to the waiting queue |
-| `/ratatosk-continue` | Resume a completed or suspended task |
-| `/ratatosk-wrapup` | End-of-day: verify PRs, save context, cleanup, summary |
+| `/autotask-start` | Fetch issues from the configured source, select, and spawn workers |
+| `/autotask-status` | Show queue, active workers, and completed jobs |
+| `/autotask-queue` | Add a task to the waiting queue |
+| `/autotask-continue` | Resume a completed or suspended task |
+| `/autotask-wrapup` | End-of-day: verify PRs, save context, cleanup, summary |
 
 All commands are also available from the dashboard command bar, email, and Teams chat. See the [User Guide](docs/user-guide.md) for the full command reference.
 

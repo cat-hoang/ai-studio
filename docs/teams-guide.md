@@ -1,8 +1,8 @@
-# Ratatosk Teams Integration Guide
+﻿# Autotask Teams Integration Guide
 
 ## Overview
 
-Ratatosk now supports **two** Teams delivery modes:
+Autotask now supports **two** Teams delivery modes:
 
 1. **Incoming Webhook** for Adaptive Card notifications
 2. **Direct Teams chat** via `teams-api` for chat messages and optional command polling
@@ -14,9 +14,9 @@ Webhook mode is still the default legacy path. Direct chat is opt-in through `co
 | Mode | What it does | What it cannot do |
 | --- | --- | --- |
 | Webhook | Sends Adaptive Card notifications into a Teams channel | Cannot read messages or replies |
-| Direct chat | Sends Ratatosk messages into a 1:1 chat, self-chat, or specific conversation; can poll that chat for `ratatosk:` commands | Depends on local `teams-api` auth and cached Teams tokens |
+| Direct chat | Sends Autotask messages into a 1:1 chat, self-chat, or specific conversation; can poll that chat for `autotask:` commands | Depends on local `teams-api` auth and cached Teams tokens |
 
-When `teams_chat_enabled: true`, Ratatosk sends Teams notifications through the **direct chat** path. When it is `false`, Ratatosk falls back to `teams_webhook_url` if that webhook is configured.
+When `teams_chat_enabled: true`, Autotask sends Teams notifications through the **direct chat** path. When it is `false`, Autotask falls back to `teams_webhook_url` if that webhook is configured.
 
 ## Direct Teams chat setup
 
@@ -29,7 +29,7 @@ teams_chat_target_mode: "self"
 teams_chat_target: ""
 teams_chat_command_polling_enabled: true
 teams_chat_command_send_replies: true
-teams_chat_command_prefix: "ratatosk:"
+teams_chat_command_prefix: "autotask:"
 teams_chat_polling_interval_ms: 30000
 ~~~
 
@@ -58,13 +58,13 @@ Incoming webhook support (Adaptive Card channel notifications) is deprecated and
 
 ## Notification behavior
 
-Direct Teams chat sends plain Ratatosk messages prefixed with:
+Direct Teams chat sends plain Autotask messages prefixed with:
 
 ~~~text
-[Ratatosk]
+[Autotask]
 ~~~
 
-That prefix is important because the Teams command poller ignores Ratatosk-generated chat messages to avoid command loops.
+That prefix is important because the Teams command poller ignores Autotask-generated chat messages to avoid command loops.
 
 Notification templates supported in both Teams modes:
 
@@ -77,36 +77,36 @@ Notification templates supported in both Teams modes:
 
 ## Sending commands from Teams
 
-When `teams_chat_command_polling_enabled: true`, Ratatosk polls the configured chat and executes messages that begin with the configured prefix.
+When `teams_chat_command_polling_enabled: true`, Autotask polls the configured chat and executes messages that begin with the configured prefix.
 
 Default prefix:
 
 ~~~text
-ratatosk:
+autotask:
 ~~~
 
 Examples:
 
 ~~~text
-ratatosk: status
-ratatosk: start WI00975129 --task 423
-ratatosk: queue WI00975129 --task 423 DEV Investigate regression
-ratatosk: retry WI00975129 --task 423
-ratatosk: cleanup WI00975129 --task 423
-ratatosk: reply WI00975129 Use option A
-ratatosk: notes WI00975129 --task 423
+autotask: status
+autotask: start WI00975129 --task 423
+autotask: queue WI00975129 --task 423 DEV Investigate regression
+autotask: retry WI00975129 --task 423
+autotask: cleanup WI00975129 --task 423
+autotask: reply WI00975129 Use option A
+autotask: notes WI00975129 --task 423
 ~~~
 
 For `setnotes`, put the command on the first line and the note content on the following lines in the same Teams message:
 
 ~~~text
-ratatosk: setnotes WI00975129 --task 423
+autotask: setnotes WI00975129 --task 423
 Line 1 of your note
 
 Line 3 after a blank line
 ~~~
 
-Ratatosk can optionally acknowledge those commands back into the same chat with `[Ratatosk]` messages when:
+Autotask can optionally acknowledge those commands back into the same chat with `[Autotask]` messages when:
 
 ~~~yaml
 teams_chat_command_send_replies: true
@@ -119,16 +119,16 @@ Direct Teams commands currently support the same command subset as the email com
 There is no special reply-only transport. Instead, when a worker asks for clarification, answer it through the normal Teams command path:
 
 ~~~text
-ratatosk: reply WI00975129 Use option A
+autotask: reply WI00975129 Use option A
 ~~~
 
 or:
 
 ~~~text
-ratatosk: answer WI00975129 Use option A
+autotask: answer WI00975129 Use option A
 ~~~
 
-This reuses the existing Ratatosk command parser and reply plumbing.
+This reuses the existing Autotask command parser and reply plumbing.
 
 ## Dashboard behavior
 
@@ -146,7 +146,7 @@ If direct chat is configured but command polling is disabled, the Teams Poller c
 
 ## Auth and operational notes
 
-Ratatosk uses the `teams-api` package for direct chat. Practical implications:
+Autotask uses the `teams-api` package for direct chat. Practical implications:
 
 - auth is local to your machine
 - first use may require an interactive Teams login
@@ -167,14 +167,14 @@ For unattended operation, keep email available as a fallback even if you mainly 
 ### Teams command did nothing
 
 1. Confirm `teams_chat_command_polling_enabled: true`
-2. Confirm the message starts with the configured prefix such as `ratatosk:`
+2. Confirm the message starts with the configured prefix such as `autotask:`
 3. Confirm the dashboard server is running
 4. Check the **Teams Poller** card for the last poll result
-5. If acknowledgements are enabled, look for a `[Ratatosk] Command failed ...` response
+5. If acknowledgements are enabled, look for a `[Autotask] Command failed ...` response
 
-### Why are Ratatosk's own messages not reprocessed as commands?
+### Why are Autotask's own messages not reprocessed as commands?
 
-Because Ratatosk only processes messages that start with the command prefix, and its own outbound chat messages start with `[Ratatosk]`.
+Because Autotask only processes messages that start with the command prefix, and its own outbound chat messages start with `[Autotask]`.
 
 ## Related documents
 

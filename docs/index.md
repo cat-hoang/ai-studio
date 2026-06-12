@@ -1,6 +1,6 @@
-# Ratatosk Documentation Index
+﻿# Autotask Documentation Index
 
-Welcome — this directory collects Ratatosk documentation.
+Welcome — this directory collects Autotask documentation.
 
 ## Guides
 
@@ -16,5 +16,5 @@ Welcome — this directory collects Ratatosk documentation.
 ## Notes
 
 - Temporary files: All ephemeral files must be stored under `temp/` (gitignored).
-- EDI CLI: see `edi --help` and `CLAUDE.md`/`AGENTS.md` for the Ratatosk task worker rules.
+- EDI CLI: see `edi --help` and `CLAUDE.md`/`AGENTS.md` for the Autotask task worker rules.
 - Adapter-specific guidance: `CLAUDE.md` (Claude Code) and `AGENTS.md` (Copilot CLI).

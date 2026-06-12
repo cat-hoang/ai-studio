@@ -1,22 +1,22 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [int]$Top = 25
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$ratatoskRoot = Split-Path -Parent $PSScriptRoot
-$statePath = Join-Path $ratatoskRoot 'temp\state.json'
+$autotaskRoot = Split-Path -Parent $PSScriptRoot
+$statePath = Join-Path $autotaskRoot 'temp\state.json'
 
 . (Join-Path $PSScriptRoot 'graph-mail-common.ps1')
-. (Join-Path $PSScriptRoot 'ratatosk-ediprod-link-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-ediprod-link-common.ps1')
 
 function Get-ConfigContent {
-    $ratatoskRoot = Split-Path -Parent $PSScriptRoot
+    $autotaskRoot = Split-Path -Parent $PSScriptRoot
     $chunks = New-Object System.Collections.Generic.List[string]
     foreach ($configPath in @(
-        (Join-Path $ratatoskRoot 'config.yaml'),
-        (Join-Path $ratatoskRoot 'config.local.yaml')
+        (Join-Path $autotaskRoot 'config.yaml'),
+        (Join-Path $autotaskRoot 'config.local.yaml')
     )) {
         if (-not (Test-Path -LiteralPath $configPath)) {
             continue
@@ -341,7 +341,7 @@ function Send-CommandReplyEmail {
         [Parameter(Mandatory)]
         [string]$Message,
 
-        [string]$SubjectPrefix = 'Ratatosk',
+        [string]$SubjectPrefix = 'Autotask',
         [string]$JobNumber = '',
         [string]$Action = '',
         [bool]$Duplicate = $false,
@@ -398,7 +398,7 @@ function Send-CommandReplyEmail {
     function Get-StatusListHtml {
         param(
             [object[]]$Items,
-            [string]$CommandPrefix = 'ratatosk:',
+            [string]$CommandPrefix = 'autotask:',
             [bool]$ShowStartCommand = $false
         )
 
@@ -502,7 +502,7 @@ function Send-CommandReplyEmail {
     $safeAction = ConvertTo-HtmlText $resolvedAction
     $duplicateText = if ($Duplicate) {
         if ($resolvedAction -eq 'status') {
-            '<p style="margin-top:16px;padding:10px 12px;border-left:4px solid #f79009;background:#fffaeb;"><strong>Duplicate command:</strong> the original email was already processed, but the status snapshot below was refreshed from the current Ratatosk state.</p>'
+            '<p style="margin-top:16px;padding:10px 12px;border-left:4px solid #f79009;background:#fffaeb;"><strong>Duplicate command:</strong> the original email was already processed, but the status snapshot below was refreshed from the current Autotask state.</p>'
         } else {
             '<p style="margin-top:16px;padding:10px 12px;border-left:4px solid #f79009;background:#fffaeb;"><strong>Duplicate command:</strong> this email matched a previously processed message and was not executed again.</p>'
         }
@@ -535,7 +535,7 @@ function Send-CommandReplyEmail {
             $detailSection += '<p style="margin-top:6px;padding:10px 12px;border-left:4px solid #f79009;background:#fffaeb;"><strong>Warnings:</strong> ' + (ConvertTo-HtmlText ($warnings -join ' | ')) + '</p>'
         }
         $detailSection += '</div>'
-        $detailSection += "<h3 style='margin:20px 0 8px;'>Startable Jobs</h3>" + (Get-StatusListHtml -Items $startableItems -CommandPrefix 'ratatosk:' -ShowStartCommand $true)
+        $detailSection += "<h3 style='margin:20px 0 8px;'>Startable Jobs</h3>" + (Get-StatusListHtml -Items $startableItems -CommandPrefix 'autotask:' -ShowStartCommand $true)
         $detailSection += "<h3 style='margin:20px 0 8px;'>Waiting Queue</h3>" + (Get-StatusListHtml -Items @((Get-ObjectPropertyValue -Object $Data -Name 'waitingQueue' -Default @())))
         $detailSection += Get-StatusJobCardsHtml -Title 'Running Jobs' -Items @((Get-ObjectPropertyValue -Object $Data -Name 'workers' -Default @())) -PromoteFinalSummary $true
         $detailSection += Get-StatusJobCardsHtml -Title 'Completed Jobs' -Items @((Get-ObjectPropertyValue -Object $Data -Name 'completedJobs' -Default @())) -PromoteFinalSummary $true
@@ -557,10 +557,10 @@ function Send-CommandReplyEmail {
         $detailSection += '</div>'
     }
 
-    $subject = "Ratatosk Reply: $resolvedAction $statusText"
+    $subject = "Autotask Reply: $resolvedAction $statusText"
     $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;background:#f5f7fb;margin:0;padding:24px;">' +
         '<div style="max-width:980px;margin:0 auto;background:#ffffff;border:1px solid #e4e7ec;border-radius:16px;padding:24px;">' +
-        "<h2 style='margin-top:0;'>Ratatosk command $statusText</h2>" +
+        "<h2 style='margin-top:0;'>Autotask command $statusText</h2>" +
         '<table style="border-collapse:collapse;width:100%;max-width:760px;">' +
         "<tr><td style='padding:6px;font-weight:bold;'>Command</td><td style='padding:6px;font-family:Consolas,monospace;'>$safeCommand</td></tr>" +
         "<tr><td style='padding:6px;font-weight:bold;'>Action</td><td style='padding:6px;'>$safeAction</td></tr>" +
@@ -583,7 +583,7 @@ $headers = @{
 $configContent = Get-ConfigContent
 $commandIntakeEnabled = Get-ConfigBooleanValue -Content $configContent -Key 'email_command_intake_enabled' -Default $false
 $commandSendReplies = Get-ConfigBooleanValue -Content $configContent -Key 'email_command_send_replies' -Default $true
-$commandSubjectPrefix = Get-ConfigTextValue -Content $configContent -Key 'email_command_subject_prefix' -Default 'Ratatosk Command'
+$commandSubjectPrefix = Get-ConfigTextValue -Content $configContent -Key 'email_command_subject_prefix' -Default 'Autotask Command'
 $mailFolderPath = Get-ConfigTextValue -Content $configContent -Key 'email_poll_folder_path' -Default 'Inbox'
 $smtpTo = Get-ConfigTextValue -Content $configContent -Key 'smtp_to' -Default ''
 $allowedSenders = @(Get-ConfigListValue -Content $configContent -Key 'email_command_allowed_senders')
@@ -606,7 +606,7 @@ foreach ($message in @($response.value)) {
     $sender = if ($message.from.emailAddress.address) { [string]$message.from.emailAddress.address } elseif ($message.sender.emailAddress.address) { [string]$message.sender.emailAddress.address } else { '' }
     $replyText = Get-ReplyText -BodyHtml ([string]$message.body.content)
 
-    $match = [regex]::Match($subject, 'Ratatosk Input Needed:\s*(?<job>(WI|CS|PRJ)\d{8})\s*\[(?<request>[0-9a-fA-F-]{36})\]', 'IgnoreCase')
+    $match = [regex]::Match($subject, 'Autotask Input Needed:\s*(?<job>(WI|CS|PRJ)\d{8})\s*\[(?<request>[0-9a-fA-F-]{36})\]', 'IgnoreCase')
     if ($match.Success) {
         $jobNumber = $match.Groups['job'].Value.ToUpperInvariant()
         $requestId = $match.Groups['request'].Value
@@ -614,7 +614,7 @@ foreach ($message in @($response.value)) {
             continue
         }
 
-        & (Join-Path $PSScriptRoot 'submit-ratatosk-user-input.ps1') `
+        & (Join-Path $PSScriptRoot 'submit-autotask-user-input.ps1') `
             -JobNumber $jobNumber `
             -RequestId $requestId `
             -Response $replyText `
@@ -665,7 +665,7 @@ foreach ($message in @($response.value)) {
         continue
     }
 
-    $commandResultText = & (Join-Path $PSScriptRoot 'invoke-ratatosk-command.ps1') `
+    $commandResultText = & (Join-Path $PSScriptRoot 'invoke-autotask-command.ps1') `
         -CommandText $commandText `
         -Source 'email-command' `
         -Responder $sender `

@@ -1,10 +1,10 @@
-# Ratatosk for Copilot CLI
+﻿# Autotask for Copilot CLI
 
-Ratatosk uses a shared orchestration core with CLI-specific adapters.
+Autotask uses a shared orchestration core with CLI-specific adapters.
 
 ## Shared entrypoints
 
-- Treat `commands\ratatosk-start.md`, `commands\ratatosk-queue.md`, `commands\ratatosk-status.md`, and `commands\ratatosk-wrapup.md` as the authoritative playbooks.
+- Treat `commands\autotask-start.md`, `commands\autotask-queue.md`, `commands\autotask-status.md`, and `commands\autotask-wrapup.md` as the authoritative playbooks.
 - Shared runtime state lives in `temp\state.json`.
 - Shared dashboard lives in `dashboard\`.
 
@@ -16,8 +16,8 @@ The `temp\` folder is gitignored and will never be committed.
 
 ## Copilot adapter rules
 
-- When asked to run Ratatosk from Copilot, prefer `tools\invoke-ratatosk-copilot.ps1`.
-- When a playbook needs to spawn worker tabs, use `tools\launch-ratatosk-worker.ps1` instead of hard-coding `claude` or `copilot`.
+- When asked to run Autotask from Copilot, prefer `tools\invoke-autotask-copilot.ps1`.
+- When a playbook needs to spawn worker tabs, use `tools\launch-autotask-worker.ps1` instead of hard-coding `claude` or `copilot`.
 - Read `config.local.yaml` and honor `worker_cli`. If the key is absent, default to `claude` for backward compatibility.
 
 ## Worker guidance
@@ -47,19 +47,19 @@ The `temp\` folder is gitignored and will never be committed.
 
 | Script | Purpose |
 |--------|---------|
-| `launch-ratatosk-worker.ps1` | Open Windows Terminal tab, select Claude/Copilot, launch agent |
-| `start-ratatosk-worker.ps1` | Workspace setup, task resolution, worker preparation |
-| `finalize-ratatosk-worker.ps1` | Final report, state update, send notifications |
-| `get-ratatosk-startable-jobs.ps1` | Fetch startable issues via configured issue-source adapter |
-| `invoke-ratatosk-command.ps1` | Command parser + dispatcher for all channels (dashboard/email/Teams) |
-| `poll-ratatosk-email-input.ps1` | Email command poller (30s interval) |
-| `poll-ratatosk-teams-input.ps1` | Teams command poller (30s interval) |
+| `launch-autotask-worker.ps1` | Open Windows Terminal tab, select Claude/Copilot, launch agent |
+| `start-autotask-worker.ps1` | Workspace setup, task resolution, worker preparation |
+| `finalize-autotask-worker.ps1` | Final report, state update, send notifications |
+| `get-autotask-startable-jobs.ps1` | Fetch startable issues via configured issue-source adapter |
+| `invoke-autotask-command.ps1` | Command parser + dispatcher for all channels (dashboard/email/Teams) |
+| `poll-autotask-email-input.ps1` | Email command poller (30s interval) |
+| `poll-autotask-teams-input.ps1` | Teams command poller (30s interval) |
 | `send-email-notification.ps1` | Email notifications via Microsoft Graph |
 | `send-teams-notification.ps1` | Teams notifications via direct chat |
-| `set-ratatosk-worker-activity.ps1` | Update activity badge in dashboard |
-| `update-ratatosk-build-plan.ps1` | Record build/test scope |
-| `request-ratatosk-user-input.ps1` | Block worker, prompt user |
-| `wait-for-ratatosk-user-input.ps1` | Poll for user reply |
+| `set-autotask-worker-activity.ps1` | Update activity badge in dashboard |
+| `update-autotask-build-plan.ps1` | Record build/test scope |
+| `request-autotask-user-input.ps1` | Block worker, prompt user |
+| `wait-for-autotask-user-input.ps1` | Poll for user reply |
 
 ### Dashboard commands (all channels: dashboard bar, email, Teams)
 
@@ -105,8 +105,8 @@ Claude Code automatically loads a persistent memory index from:
 
 | Repo path | Encoded project path |
 |-----------|---------------------|
-| `C:\BS\ratatosk` | `C--BS-ratatosk` |
-| `D:\work\ratatosk` | `D--work-ratatosk` |
+| `C:\BS\autotask` | `C--BS-autotask` |
+| `D:\work\autotask` | `D--work-autotask` |
 
 Full path on Windows: `C:\Users\{USERNAME}\.claude\projects\{encoded}\memory\`
 

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory)]
     [string]$JsonPayload
 )
@@ -6,16 +6,16 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-config-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-config-common.ps1')
 . (Join-Path $PSScriptRoot 'teams-chat-common.ps1')
 
 $data = $JsonPayload | ConvertFrom-Json
 $templateName = [string]$data.templateName
 $tplData = $data.data
 
-$ratatoskRoot = Split-Path -Parent $PSScriptRoot
-$statePath = Join-Path $ratatoskRoot 'temp\state.json'
-$linkCommonPath = Join-Path $PSScriptRoot 'ratatosk-ediprod-link-common.ps1'
+$autotaskRoot = Split-Path -Parent $PSScriptRoot
+$statePath = Join-Path $autotaskRoot 'temp\state.json'
+$linkCommonPath = Join-Path $PSScriptRoot 'autotask-ediprod-link-common.ps1'
 if (-not (Test-Path -LiteralPath $linkCommonPath)) {
     throw "Shared ediProd link helper not found: $linkCommonPath"
 }
@@ -93,8 +93,8 @@ function Get-NotificationLogExcerpt {
 # The legacy webhook code was removed to prevent dual-path complexity. If you still rely on a webhook,
 # migrate to direct Teams chat or keep a local adapter that translates chat -> webhook.
 
-$configContent = Get-RatatoskConfigContent
-$teamsChatSettings = Get-RatatoskTeamsChatSettings
+$configContent = Get-AutotaskConfigContent
+$teamsChatSettings = Get-AutotaskTeamsChatSettings
 if (-not $teamsChatSettings.enabled) {
     throw "Deprecated: incoming Teams webhook support has been removed. Enable direct Teams chat by setting 'teams_chat_enabled: true' and configure teams_chat_target_mode/teams_chat_target. See docs/teams-guide.md for migration steps."
 }
@@ -187,7 +187,7 @@ switch ($templateName) {
         )
 
         $chatText = Join-NotificationLines @(
-            "$(Get-RatatoskTeamsNotificationPrefix) Task Started"
+            "$(Get-AutotaskTeamsNotificationPrefix) Task Started"
             "Job: $jobLabel  $jobLink"
             "Type: $taskType"
             "Task: $taskSequence"
@@ -252,7 +252,7 @@ switch ($templateName) {
         )
 
         $chatText = Join-NotificationLines @(
-            "$(Get-RatatoskTeamsNotificationPrefix) Task Completed"
+            "$(Get-AutotaskTeamsNotificationPrefix) Task Completed"
             "Job: $jobLabel  $jobLink"
             "Type: $taskType"
             "Task: $taskSequence"
@@ -321,7 +321,7 @@ switch ($templateName) {
         )
 
         $chatText = Join-NotificationLines @(
-            "$(Get-RatatoskTeamsNotificationPrefix) Task Failed"
+            "$(Get-AutotaskTeamsNotificationPrefix) Task Failed"
             "Job: $jobLink"
             "Task: $taskSequence"
             "Type: $taskType"
@@ -396,13 +396,13 @@ switch ($templateName) {
             }
             @{
                 type = 'TextBlock'
-                text = "Use the Ratatosk dashboard command bar with: `reply $jobNumber <your answer>` or reply to the matching Ratatosk email notification."
+                text = "Use the Autotask dashboard command bar with: `reply $jobNumber <your answer>` or reply to the matching Autotask email notification."
                 wrap = $true
             }
         )
 
         $chatText = Join-NotificationLines @(
-            "$(Get-RatatoskTeamsNotificationPrefix) User Input Needed"
+            "$(Get-AutotaskTeamsNotificationPrefix) User Input Needed"
             "Job: $jobLink"
             "Task: $taskSequence"
             "Type: $taskType"
@@ -458,7 +458,7 @@ switch ($templateName) {
         )
 
         $chatText = Join-NotificationLines @(
-            "$(Get-RatatoskTeamsNotificationPrefix) Job Queued"
+            "$(Get-AutotaskTeamsNotificationPrefix) Job Queued"
             "Job: $jobLink"
             "Type: $taskType"
             "Description: $description"
@@ -509,7 +509,7 @@ switch ($templateName) {
         }
 
         $cardBody = @(
-            @{ type = 'TextBlock'; text = 'Ratatosk Daily Summary'; weight = 'Bolder'; size = 'Large' }
+            @{ type = 'TextBlock'; text = 'Autotask Daily Summary'; weight = 'Bolder'; size = 'Large' }
             @{
                 type = 'Table'
                 columns = @(
@@ -521,7 +521,7 @@ switch ($templateName) {
 
         $summaryLines = if ($workerRows.Count -gt 0) { @($workerRows) } else { @('- No worker rows in this summary.') }
         $chatText = Join-NotificationLines @(
-            "$(Get-RatatoskTeamsNotificationPrefix) Ratatosk Daily Summary"
+            "$(Get-AutotaskTeamsNotificationPrefix) Autotask Daily Summary"
             $summaryLines
         )
 
@@ -533,7 +533,7 @@ switch ($templateName) {
             }
         } else { @() }
         $tableHtml = '<table><tr><th>Worker</th><th>Zone</th><th>Status</th><th>Job</th><th>Last Activity</th></tr>' + ($tableRows -join '') + '</table>'
-        $chatHtml = "<p><strong>📊 Ratatosk Daily Summary</strong></p>$tableHtml"
+        $chatHtml = "<p><strong>📊 Autotask Daily Summary</strong></p>$tableHtml"
     }
 
     'status-report' {
@@ -542,8 +542,8 @@ switch ($templateName) {
             $c = $tplData.counts
             $statusReport = "Startable: $($c.startableJobs)  ·  Queue: $($c.waitingQueue)  ·  Workers: $($c.workers)  ·  Completed: $($c.completedJobs)  ·  Failed: $($c.failedJobs)"
         }
-        if ([string]::IsNullOrWhiteSpace($statusReport)) { $statusReport = 'Ratatosk Status' }
-        $prefix = "$(Get-RatatoskTeamsNotificationPrefix) Status"
+        if ([string]::IsNullOrWhiteSpace($statusReport)) { $statusReport = 'Autotask Status' }
+        $prefix = "$(Get-AutotaskTeamsNotificationPrefix) Status"
         $chatText = "$prefix`n$statusReport"
         # Fallback uses raw markdown so **bold** and code blocks render correctly in Teams
         $chatHtml = $chatText
@@ -564,7 +564,7 @@ try {
     # (The old adaptive-card webhook path was intentionally deprecated.)
 
     # --- Direct chat (rich HTML log; no toast but keeps history) ---
-    $teamsChatDisabledReason = Get-RatatoskTeamsChatDisabledReason -Settings $teamsChatSettings
+    $teamsChatDisabledReason = Get-AutotaskTeamsChatDisabledReason -Settings $teamsChatSettings
     if ($teamsChatSettings.enabled -and [string]::IsNullOrWhiteSpace($teamsChatDisabledReason)) {
         try {
             $chatResult = $null
@@ -572,14 +572,14 @@ try {
             # Try SharePoint file attachment first (renders Markdown with links)
             $tmpDir = [System.IO.Path]::GetTempPath()
             $safeName = ($templateName -replace '[^a-zA-Z0-9_-]', '-')
-            $tmpFile = Join-Path $tmpDir "ratatosk-$safeName-$(Get-Date -Format 'yyyyMMddHHmmss').md"
+            $tmpFile = Join-Path $tmpDir "autotask-$safeName-$(Get-Date -Format 'yyyyMMddHHmmss').md"
             $sendFileDelivered = $false
             try {
                 [System.IO.File]::WriteAllText($tmpFile, $chatText, [System.Text.Encoding]::UTF8)
                 $captionLine = ($chatText -split "`n")[0].Trim()
-                $chatResult = Invoke-RatatoskTeamsChat -Action 'send-file' -Settings $teamsChatSettings `
+                $chatResult = Invoke-AutotaskTeamsChat -Action 'send-file' -Settings $teamsChatSettings `
                     -FilePath $tmpFile -Caption $captionLine
-                # Only set after a clean return — if Invoke-RatatoskTeamsChat returned without throwing,
+                # Only set after a clean return — if Invoke-AutotaskTeamsChat returned without throwing,
                 # the file was delivered. Do not fall back even if $chatResult is null.
                 $sendFileDelivered = $true
             } catch {
@@ -593,10 +593,10 @@ try {
             # Fallback: send rich HTML directly — only when send-file never reached delivery.
             # If send-file threw AFTER delivering (e.g. node crashed before writing output), $sendFileDelivered
             # remains $false and we would fall back, but that is the safer trade-off: one lost notification
-            # is preferable to a duplicate. Invoke-RatatoskTeamsChat throws on empty/invalid node output,
+            # is preferable to a duplicate. Invoke-AutotaskTeamsChat throws on empty/invalid node output,
             # so a clean delivery always sets $sendFileDelivered = $true above.
             if ($null -eq $chatResult -and -not $sendFileDelivered) {
-                $chatResult = Invoke-RatatoskTeamsChat -Action 'send-message' -Settings $teamsChatSettings -Content $chatHtml -Format $chatFallbackFormat
+                $chatResult = Invoke-AutotaskTeamsChat -Action 'send-message' -Settings $teamsChatSettings -Content $chatHtml -Format $chatFallbackFormat
             }
 
             $channels += 'chat'

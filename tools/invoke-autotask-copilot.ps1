@@ -1,4 +1,4 @@
-[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
+﻿[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low')]
 param(
     [Parameter(Mandatory)]
     [ValidateSet('start', 'queue', 'status', 'wrapup')]
@@ -15,7 +15,7 @@ function Get-OrchestratorRoot {
     return [System.IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 }
 
-function Get-RatatoskPrompt {
+function Get-AutotaskPrompt {
     param(
         [Parameter(Mandatory)]
         [string]$CommandPath,
@@ -33,12 +33,12 @@ function Get-RatatoskPrompt {
     }
 
     return @"
-You are operating inside the Ratatosk orchestrator repository.
+You are operating inside the Autotask orchestrator repository.
 
 Read and execute the instructions in:
 $CommandPath
 
-Treat that file as the authoritative playbook for this Ratatosk command.
+Treat that file as the authoritative playbook for this Autotask command.
 When worker tabs need to be spawned, respect worker_cli from config.local.yaml and use $LauncherPath instead of hard-coding a CLI executable.
 
 $argumentSection
@@ -47,12 +47,12 @@ $argumentSection
 
 function Main {
     $orchestratorRoot = Get-OrchestratorRoot
-    $commandPath = Join-Path $orchestratorRoot ("commands\ratatosk-{0}.md" -f $Command)
-    $launcherPath = Join-Path $orchestratorRoot 'tools\launch-ratatosk-worker.ps1'
+    $commandPath = Join-Path $orchestratorRoot ("commands\autotask-{0}.md" -f $Command)
+    $launcherPath = Join-Path $orchestratorRoot 'tools\launch-autotask-worker.ps1'
     $pluginManifestPath = Join-Path $orchestratorRoot 'plugin.json'
 
     if (-not (Test-Path -LiteralPath $commandPath)) {
-        throw "Ratatosk command playbook not found: $commandPath"
+        throw "Autotask command playbook not found: $commandPath"
     }
 
     if (-not (Test-Path -LiteralPath $pluginManifestPath)) {
@@ -63,7 +63,7 @@ function Main {
         throw 'GitHub Copilot CLI is required but was not found on PATH.'
     }
 
-    $prompt = Get-RatatoskPrompt -CommandPath $commandPath -LauncherPath $launcherPath -ArgumentsText $Arguments
+    $prompt = Get-AutotaskPrompt -CommandPath $commandPath -LauncherPath $launcherPath -ArgumentsText $Arguments
     $argumentList = @(
         '-i', $prompt,
         '--plugin-dir', $orchestratorRoot,
@@ -72,7 +72,7 @@ function Main {
         '--add-dir', $orchestratorRoot
     )
 
-    if ($PSCmdlet.ShouldProcess($Command, 'Launch Ratatosk in Copilot CLI')) {
+    if ($PSCmdlet.ShouldProcess($Command, 'Launch Autotask in Copilot CLI')) {
         Push-Location -LiteralPath $orchestratorRoot
         try {
             & copilot @argumentList

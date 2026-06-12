@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ratatosk Dashboard</title>
+<title>Autotask Dashboard</title>
 <style>
 :root {
   --bg: #1a1a2e;
@@ -307,7 +307,7 @@ body.light #instructTextarea { background: #f8fafc !important; color: #1e293b !i
 <body>
 <div class="header">
   <div class="header-left">
-    <h1>Ratatosk</h1>
+    <h1>Autotask</h1>
     <div class="subtitle">The squirrel that runs between worlds &mdash; orchestrating agents across branches</div>
   </div>
   <div class="header-right">
@@ -388,8 +388,8 @@ body.light #instructTextarea { background: #f8fafc !important; color: #1e293b !i
 <script>
 let lastState = null;
 let notificationsEnabled = false;
-const STARTABLE_FILTER_STORAGE_KEY = 'ratatosk-hide-never-auto-startable';
-const THEME_STORAGE_KEY = 'ratatosk-theme';
+const STARTABLE_FILTER_STORAGE_KEY = 'autotask-hide-never-auto-startable';
+const THEME_STORAGE_KEY = 'autotask-theme';
 let hideNeverAutoStartable = false;
 let commandDraft = '';
 let commandHelpOpen = false;
@@ -1052,7 +1052,7 @@ function renderCard(item, type) {
   }
 
   if (type === 'startable' && item.neverAutoStart) {
-    html += '<div class="attention-inline attention-inline-warning"><strong>Auto start disabled:</strong> Ratatosk will not launch this item automatically.</div>';
+    html += '<div class="attention-inline attention-inline-warning"><strong>Auto start disabled:</strong> Autotask will not launch this item automatically.</div>';
   }
 
   if (type === 'startable' && Array.isArray(item.startableTasks) && item.startableTasks.length > 1) {
@@ -1159,13 +1159,13 @@ function detectChanges(oldState, newState) {
   (newState.completedJobs || []).forEach(j => {
     const taskKey = getTaskKey(j.jobNumber, j.taskSequence);
     if (!oldCompleted.has(taskKey)) {
-      new Notification('Ratatosk: Job Completed', { body: j.jobNumber + (j.taskSequence ? (' task ' + j.taskSequence) : '') + ' finished successfully' });
+      new Notification('Autotask: Job Completed', { body: j.jobNumber + (j.taskSequence ? (' task ' + j.taskSequence) : '') + ' finished successfully' });
     }
   });
   (newState.failedJobs || []).forEach(j => {
     const taskKey = getTaskKey(j.jobNumber, j.taskSequence);
     if (!oldFailed.has(taskKey)) {
-      new Notification('Ratatosk: Job Failed', { body: j.jobNumber + (j.taskSequence ? (' task ' + j.taskSequence) : '') + ' encountered an error' });
+      new Notification('Autotask: Job Failed', { body: j.jobNumber + (j.taskSequence ? (' task ' + j.taskSequence) : '') + ' encountered an error' });
     }
   });
 }
@@ -1316,7 +1316,7 @@ async function executeCommand() {
       throw new Error(data.error || data.message || 'Command failed');
     }
 
-    showToast(data.message || 'Command executed', data.requiresRatatoskStart ? 'info' : 'success');
+    showToast(data.message || 'Command executed', data.requiresAutotaskStart ? 'info' : 'success');
     refreshState();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1372,7 +1372,7 @@ async function jumpToTab(jobNumber) {
 
 async function cleanupJob(jobNumber, taskSequence) {
   const label = jobNumber + (taskSequence ? (' task ' + taskSequence) : '');
-  if (!confirm('Cleanup ' + label + '? This removes the selected task record. Ratatosk will only delete the shared workspace if no other tasks from the same WI remain.')) return;
+  if (!confirm('Cleanup ' + label + '? This removes the selected task record. Autotask will only delete the shared workspace if no other tasks from the same WI remain.')) return;
   try {
     const cleanupUrl = '/api/cleanup/' + encodeURIComponent(jobNumber) + (taskSequence ? ('?taskSequence=' + encodeURIComponent(taskSequence)) : '');
     const res = await fetch(cleanupUrl, {
@@ -1480,7 +1480,7 @@ async function startJob(jobNumber, taskSequence) {
     if (!data.success) {
       throw new Error(data.error || data.message || ('Failed to start ' + jobNumber));
     }
-    showToast(data.message || ('Queued ' + jobNumber), data.requiresRatatoskStart ? 'info' : 'success');
+    showToast(data.message || ('Queued ' + jobNumber), data.requiresAutotaskStart ? 'info' : 'success');
     refreshState();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -1596,7 +1596,7 @@ async function retryJob(jobNumber, taskSequence) {
     if (!data.success) {
       throw new Error(data.error || data.message || ('Failed to retry ' + jobNumber));
     }
-    showToast(data.message || ('Re-queued ' + jobNumber), data.requiresRatatoskStart ? 'info' : 'success');
+    showToast(data.message || ('Re-queued ' + jobNumber), data.requiresAutotaskStart ? 'info' : 'success');
     refreshState();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');

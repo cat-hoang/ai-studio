@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$IssueId = '',
 
@@ -40,7 +40,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 
 # Auto-detect IssueId from workspace directory name if not provided
 if ([string]::IsNullOrWhiteSpace($IssueId)) {
@@ -50,23 +50,23 @@ if ([string]::IsNullOrWhiteSpace($IssueId)) {
     }
 }
 
-$state = Read-RatatoskState
-$worker = Get-RatatoskWorker -State $state -IssueId $IssueId
+$state = Read-AutotaskState
+$worker = Get-AutotaskWorker -State $state -IssueId $IssueId
 if (-not $worker) {
     throw "Worker not found for issue $IssueId"
 }
 
-Set-RatatoskProperty -Object $worker -Name 'activityStatus' -Value $ActivityStatus
-Set-RatatoskProperty -Object $worker -Name 'activityMessage' -Value $ActivityMessage
+Set-AutotaskProperty -Object $worker -Name 'activityStatus' -Value $ActivityStatus
+Set-AutotaskProperty -Object $worker -Name 'activityMessage' -Value $ActivityMessage
 $timestamp = Get-Date -Format 'o'
-Set-RatatoskWorkerHeartbeat -Worker $worker -Timestamp $timestamp
+Set-AutotaskWorkerHeartbeat -Worker $worker -Timestamp $timestamp
 
 if (-not [string]::IsNullOrWhiteSpace($Phase)) {
-    Set-RatatoskProperty -Object $worker -Name 'phase' -Value $Phase
+    Set-AutotaskProperty -Object $worker -Name 'phase' -Value $Phase
 }
 
 if (-not [string]::IsNullOrWhiteSpace($Status)) {
-    Set-RatatoskProperty -Object $worker -Name 'status' -Value $Status
+    Set-AutotaskProperty -Object $worker -Name 'status' -Value $Status
 }
 
 if (-not [string]::IsNullOrWhiteSpace($Description)) {
@@ -74,12 +74,12 @@ if (-not [string]::IsNullOrWhiteSpace($Description)) {
     $existingDesc = [string](Get-ObjectPropertyValue -Object $worker -Name 'description' -Default '')
     $existingSummary = [string](Get-ObjectPropertyValue -Object $worker -Name 'summary' -Default '')
     if ([string]::IsNullOrWhiteSpace($existingDesc)) {
-        Set-RatatoskProperty -Object $worker -Name 'description' -Value $Description
+        Set-AutotaskProperty -Object $worker -Name 'description' -Value $Description
     }
     if ([string]::IsNullOrWhiteSpace($existingSummary)) {
-        Set-RatatoskProperty -Object $worker -Name 'summary' -Value $Description
+        Set-AutotaskProperty -Object $worker -Name 'summary' -Value $Description
     }
 }
 
-Write-RatatoskState -State $state
+Write-AutotaskState -State $state
 $worker | ConvertTo-Json -Depth 20

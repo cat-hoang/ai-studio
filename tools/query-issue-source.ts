@@ -1,8 +1,8 @@
-/**
+﻿/**
  * query-issue-source.ts
  *
  * Bun entry point for the generic issue-source adapter layer.
- * Called by get-ratatosk-startable-jobs.ps1 when `issue_source.adapter` is
+ * Called by get-autotask-startable-jobs.ps1 when `issue_source.adapter` is
  * configured to something other than "ediprod".
  *
  * Outputs a single JSON object to stdout in the canonical shape that the PS1

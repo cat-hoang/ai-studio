@@ -1,6 +1,6 @@
-{
-  "name": "ratatosk",
+﻿{
+  "name": "autotask",
   "version": "1.0.0",
-  "description": "Ratatosk task orchestrator — autonomous multi-agent work item processor",
+  "description": "Autotask task orchestrator — autonomous multi-agent work item processor",
   "author": { "name": "Hoai Tran" }
 }

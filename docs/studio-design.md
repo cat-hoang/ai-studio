@@ -1,6 +1,6 @@
-# Ratatosk Studio — Architecture Design
+﻿# Autotask Studio — Architecture Design
 
-> Transform Ratatosk from a single-worker task automator into a **multi-agent software development studio**: a collaborative team of specialized AI agents that together take a work item from requirements through design, implementation, testing, and review.
+> Transform Autotask from a single-worker task automator into a **multi-agent software development studio**: a collaborative team of specialized AI agents that together take a work item from requirements through design, implementation, testing, and review.
 
 ---
 
@@ -256,7 +256,7 @@ Each role is a separate agent definition file (`agents/<role>.md`) with its own 
 
 ---
 
-### 4.5 Orchestrator (enhanced `ratatosk-start` / `studio-start`)
+### 4.5 Orchestrator (enhanced `autotask-start` / `studio-start`)
 
 The orchestrator is not a separate AI agent — it is the human-readable playbook (`commands/studio-start.md`) executed by the active CLI (Claude or Copilot). It:
 
@@ -493,11 +493,11 @@ startable_jobs_fallback_on_empty
 | Command | File | Purpose |
 |---------|------|---------|
 | `studio-start` | `commands/studio-start.md` | Studio orchestrator — polls issues, runs full agent pipeline |
-| `studio-status` | `commands/studio-status.md` | Per-stage progress view (extends `ratatosk-status`) |
+| `studio-status` | `commands/studio-status.md` | Per-stage progress view (extends `autotask-status`) |
 | `studio-review` | `commands/studio-review.md` | Show `spec.md` or `pr-review.md` for human gate approval |
 | `studio-approve` | (dashboard / Teams / email) | Approve a gate and let the pipeline continue |
 
-Existing commands (`ratatosk-start`, `ratatosk-status`, etc.) remain as legacy single-worker paths (still functional, now labeled as "solo mode").
+Existing commands (`autotask-start`, `autotask-status`, etc.) remain as legacy single-worker paths (still functional, now labeled as "solo mode").
 
 ---
 
@@ -549,8 +549,8 @@ workspaces/<issue-id>/
 | `temp/state.json` | Extended schema — add `studioTeam` per worker |
 | `dashboard/server.js` | Add studio stage rendering; adapt issue source display |
 | `dashboard/index.html` | Add per-stage progress bar in Kanban card |
-| `tools/start-ratatosk-worker.ps1` | Add `--studio` flag; conditionally invoke studio pipeline |
-| `tools/get-ratatosk-startable-jobs.ps1` | Refactor to call issue source adapter |
+| `tools/start-autotask-worker.ps1` | Add `--studio` flag; conditionally invoke studio pipeline |
+| `tools/get-autotask-startable-jobs.ps1` | Refactor to call issue source adapter |
 | `README.md` | Update to reflect studio mode |
 | `AGENTS.md` / `CLAUDE.md` | Update agent catalog and key paths |
 
@@ -561,8 +561,8 @@ workspaces/<issue-id>/
 | `tools/ediProd-mcp-server.js` | Move to `adapters/issue-sources/ediprod.ts` (optional plugin) |
 | `hooks/guard-mcp-ediprod-task.ps1` | Retire (ediProd-specific) |
 | `hooks/guard-bash-edi-task.ps1` | Retire (ediProd-specific) |
-| `tools/get-ratatosk-task-notes.ps1` | Generalize into issue tracker adapter |
-| `tools/set-ratatosk-task-notes.ps1` | Generalize |
+| `tools/get-autotask-task-notes.ps1` | Generalize into issue tracker adapter |
+| `tools/set-autotask-task-notes.ps1` | Generalize |
 | `skills/crikey-build-artifacts/` | Move to optional `plugins/crikey/` (still usable for WTG) |
 
 ---
@@ -574,7 +574,7 @@ Studio mode is **additive** — the existing single-worker pipeline continues to
 ### Phase 1 — Adapter layer (no breakage)
 
 1. Create `adapters/issue-sources/` with all adapters
-2. Update `get-ratatosk-startable-jobs.ps1` to route through the adapter
+2. Update `get-autotask-startable-jobs.ps1` to route through the adapter
 3. Add `issue_source` config key; keep `buffer_board_url` as deprecated alias
 4. Add `repo_groups` and `build.commands` to config; keep old WTG keys as deprecated
 

@@ -1,18 +1,18 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
-. (Join-Path $PSScriptRoot 'ratatosk-config-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-config-common.ps1')
 
-$script:RatatoskTeamsChatHelperPath = Join-Path (Get-RatatoskRootPath) 'tools\invoke-teams-chat.js'
-$script:RatatoskTeamsNotificationPrefix = '[Ratatosk]'
+$script:AutotaskTeamsChatHelperPath = Join-Path (Get-AutotaskRootPath) 'tools\invoke-teams-chat.js'
+$script:AutotaskTeamsNotificationPrefix = '[Autotask]'
 $script:DefaultTeamsChatPollIntervalMs = 30000
 
-function Get-RatatoskTeamsNotificationPrefix {
-    return $script:RatatoskTeamsNotificationPrefix
+function Get-AutotaskTeamsNotificationPrefix {
+    return $script:AutotaskTeamsNotificationPrefix
 }
 
-function Test-RatatoskTeamsChatTargetConfigured {
+function Test-AutotaskTeamsChatTargetConfigured {
     param(
         [Parameter(Mandatory)]
         [psobject]$Settings
@@ -27,35 +27,35 @@ function Test-RatatoskTeamsChatTargetConfigured {
     }
 }
 
-function Get-RatatoskTeamsChatSettings {
-    $configContent = Get-RatatoskConfigContent
-    $targetMode = Get-RatatoskConfigTextValue -Content $configContent -Key 'teams_chat_target_mode' -Default 'self'
+function Get-AutotaskTeamsChatSettings {
+    $configContent = Get-AutotaskConfigContent
+    $targetMode = Get-AutotaskConfigTextValue -Content $configContent -Key 'teams_chat_target_mode' -Default 'self'
     if ([string]::IsNullOrWhiteSpace($targetMode)) {
         $targetMode = 'self'
     }
 
-    $commandPrefix = Get-RatatoskConfigTextValue -Content $configContent -Key 'teams_chat_command_prefix' -Default 'ratatosk:'
+    $commandPrefix = Get-AutotaskConfigTextValue -Content $configContent -Key 'teams_chat_command_prefix' -Default 'autotask:'
     if ([string]::IsNullOrWhiteSpace($commandPrefix)) {
-        $commandPrefix = 'ratatosk:'
+        $commandPrefix = 'autotask:'
     }
 
     $settings = [PSCustomObject]@{
-        enabled = Get-RatatoskConfigBooleanValue -Content $configContent -Key 'teams_chat_enabled' -Default $false
-        email = Get-RatatoskConfigTextValue -Content $configContent -Key 'teams_chat_email'
+        enabled = Get-AutotaskConfigBooleanValue -Content $configContent -Key 'teams_chat_enabled' -Default $false
+        email = Get-AutotaskConfigTextValue -Content $configContent -Key 'teams_chat_email'
         targetMode = $targetMode.Trim().ToLowerInvariant()
-        target = Get-RatatoskConfigTextValue -Content $configContent -Key 'teams_chat_target'
-        commandPollingEnabled = Get-RatatoskConfigBooleanValue -Content $configContent -Key 'teams_chat_command_polling_enabled' -Default $false
-        commandSendReplies = Get-RatatoskConfigBooleanValue -Content $configContent -Key 'teams_chat_command_send_replies' -Default $true
+        target = Get-AutotaskConfigTextValue -Content $configContent -Key 'teams_chat_target'
+        commandPollingEnabled = Get-AutotaskConfigBooleanValue -Content $configContent -Key 'teams_chat_command_polling_enabled' -Default $false
+        commandSendReplies = Get-AutotaskConfigBooleanValue -Content $configContent -Key 'teams_chat_command_send_replies' -Default $true
         commandPrefix = $commandPrefix
-        pollingIntervalMs = Get-RatatoskConfigNumberValue -Content $configContent -Key 'teams_chat_polling_interval_ms' -Default $script:DefaultTeamsChatPollIntervalMs
-        helperPath = $script:RatatoskTeamsChatHelperPath
+        pollingIntervalMs = Get-AutotaskConfigNumberValue -Content $configContent -Key 'teams_chat_polling_interval_ms' -Default $script:DefaultTeamsChatPollIntervalMs
+        helperPath = $script:AutotaskTeamsChatHelperPath
     }
 
-    $settings | Add-Member -MemberType NoteProperty -Name 'targetConfigured' -Value (Test-RatatoskTeamsChatTargetConfigured -Settings $settings)
+    $settings | Add-Member -MemberType NoteProperty -Name 'targetConfigured' -Value (Test-AutotaskTeamsChatTargetConfigured -Settings $settings)
     return $settings
 }
 
-function Get-RatatoskTeamsChatDisabledReason {
+function Get-AutotaskTeamsChatDisabledReason {
     param(
         [Parameter(Mandatory)]
         [psobject]$Settings,
@@ -90,18 +90,18 @@ function Get-RatatoskTeamsChatDisabledReason {
     return ''
 }
 
-function Get-RatatoskTeamsChatState {
+function Get-AutotaskTeamsChatState {
     param(
         [Parameter(Mandatory)]
         [psobject]$State
     )
 
     if (-not $State.PSObject.Properties['teamsChat'] -or $null -eq $State.teamsChat) {
-        Set-RatatoskProperty -Object $State -Name 'teamsChat' -Value ([PSCustomObject]@{})
+        Set-AutotaskProperty -Object $State -Name 'teamsChat' -Value ([PSCustomObject]@{})
     }
 
     if (-not $State.teamsChat.PSObject.Properties['conversation'] -or $null -eq $State.teamsChat.conversation) {
-        Set-RatatoskProperty -Object $State.teamsChat -Name 'conversation' -Value ([PSCustomObject]@{
+        Set-AutotaskProperty -Object $State.teamsChat -Name 'conversation' -Value ([PSCustomObject]@{
             targetMode = ''
             target = ''
             conversationId = ''
@@ -111,7 +111,7 @@ function Get-RatatoskTeamsChatState {
     }
 
     if (-not $State.teamsChat.PSObject.Properties['cursor'] -or $null -eq $State.teamsChat.cursor) {
-        Set-RatatoskProperty -Object $State.teamsChat -Name 'cursor' -Value ([PSCustomObject]@{
+        Set-AutotaskProperty -Object $State.teamsChat -Name 'cursor' -Value ([PSCustomObject]@{
             conversationId = ''
             lastProcessedMessageId = ''
             lastProcessedArrivalTime = ''
@@ -120,13 +120,13 @@ function Get-RatatoskTeamsChatState {
     }
 
     if (-not $State.teamsChat.PSObject.Properties['lastPollAt']) {
-        Set-RatatoskProperty -Object $State.teamsChat -Name 'lastPollAt' -Value ''
+        Set-AutotaskProperty -Object $State.teamsChat -Name 'lastPollAt' -Value ''
     }
 
     return $State.teamsChat
 }
 
-function Get-RatatoskTeamsChatConversationCache {
+function Get-AutotaskTeamsChatConversationCache {
     param(
         [Parameter(Mandatory)]
         [psobject]$State,
@@ -135,7 +135,7 @@ function Get-RatatoskTeamsChatConversationCache {
         [psobject]$Settings
     )
 
-    $teamsChatState = Get-RatatoskTeamsChatState -State $State
+    $teamsChatState = Get-AutotaskTeamsChatState -State $State
     $conversationState = $teamsChatState.conversation
     if (
         [string]::Equals([string]$conversationState.targetMode, [string]$Settings.targetMode, [System.StringComparison]::OrdinalIgnoreCase) -and
@@ -148,7 +148,7 @@ function Get-RatatoskTeamsChatConversationCache {
     return $null
 }
 
-function Set-RatatoskTeamsChatConversationCache {
+function Set-AutotaskTeamsChatConversationCache {
     param(
         [Parameter(Mandatory)]
         [psobject]$State,
@@ -162,7 +162,7 @@ function Set-RatatoskTeamsChatConversationCache {
         [string]$TargetDescription = ''
     )
 
-    $teamsChatState = Get-RatatoskTeamsChatState -State $State
+    $teamsChatState = Get-AutotaskTeamsChatState -State $State
     $conversationState = $teamsChatState.conversation
     $conversationState.targetMode = [string]$Settings.targetMode
     $conversationState.target = [string]$Settings.target
@@ -171,16 +171,16 @@ function Set-RatatoskTeamsChatConversationCache {
     $conversationState.resolvedAt = (Get-Date).ToUniversalTime().ToString('o')
 }
 
-function Get-RatatoskTeamsChatCursor {
+function Get-AutotaskTeamsChatCursor {
     param(
         [Parameter(Mandatory)]
         [psobject]$State
     )
 
-    return (Get-RatatoskTeamsChatState -State $State).cursor
+    return (Get-AutotaskTeamsChatState -State $State).cursor
 }
 
-function Set-RatatoskTeamsChatCursor {
+function Set-AutotaskTeamsChatCursor {
     param(
         [Parameter(Mandatory)]
         [psobject]$State,
@@ -190,14 +190,14 @@ function Set-RatatoskTeamsChatCursor {
         [string]$LastProcessedArrivalTime = ''
     )
 
-    $cursor = Get-RatatoskTeamsChatCursor -State $State
+    $cursor = Get-AutotaskTeamsChatCursor -State $State
     $cursor.conversationId = [string]$ConversationId
     $cursor.lastProcessedMessageId = [string]$LastProcessedMessageId
     $cursor.lastProcessedArrivalTime = [string]$LastProcessedArrivalTime
     $cursor.updatedAt = (Get-Date).ToUniversalTime().ToString('o')
 }
 
-function Invoke-RatatoskTeamsChat {
+function Invoke-AutotaskTeamsChat {
     param(
         [Parameter(Mandatory)]
         [ValidateSet('resolve-target', 'send-message', 'send-file', 'get-messages')]
@@ -215,7 +215,7 @@ function Invoke-RatatoskTeamsChat {
         [int]$Limit = 50
     )
 
-    $disabledReason = Get-RatatoskTeamsChatDisabledReason -Settings $Settings
+    $disabledReason = Get-AutotaskTeamsChatDisabledReason -Settings $Settings
     if (-not [string]::IsNullOrWhiteSpace($disabledReason)) {
         throw $disabledReason
     }

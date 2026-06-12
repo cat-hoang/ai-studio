@@ -1,5 +1,5 @@
-{
-  "description": "Ratatosk Claude worker hooks",
+﻿{
+  "description": "Autotask Claude worker hooks",
   "hooks": {
     "Stop": [
       {

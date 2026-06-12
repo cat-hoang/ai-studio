@@ -1,12 +1,12 @@
+﻿---
+description: "Add an issue to the Autotask waiting queue"
 ---
-description: "Add an issue to the Ratatosk waiting queue"
----
 
-# Ratatosk Queue
+# Autotask Queue
 
-Add an issue to the Ratatosk waiting queue for later processing.
+Add an issue to the Autotask waiting queue for later processing.
 
-**Usage:** `/ratatosk-queue GH-42` or `/ratatosk-queue GH-42 bugfix "Description here"`
+**Usage:** `/autotask-queue GH-42` or `/autotask-queue GH-42 bugfix "Description here"`
 
 ## Step 1: Parse Arguments
 
@@ -68,12 +68,12 @@ Write the updated state back to `temp/state.json`.
 ## Step 7: Send Notification
 
 Send a Teams notification using the queue-added template:
-- Message: "Ratatosk: Queued {issueId} ({taskType}) - {description}"
+- Message: "Autotask: Queued {issueId} ({taskType}) - {description}"
 
 ## Step 8: Confirm
 
 Print confirmation to the console:
 ```
-Queued {issueId} ({taskType}). Run /ratatosk-start to spawn workers.
+Queued {issueId} ({taskType}). Run /autotask-start to spawn workers.
 ```
 

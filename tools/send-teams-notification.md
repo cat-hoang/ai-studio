@@ -1,4 +1,4 @@
----
+﻿---
 name: send-teams-notification
 description: Sends Teams notifications via Incoming Webhook using Adaptive Card templates. Supports task lifecycle events and daily summaries.
 parameters:
@@ -28,8 +28,8 @@ Sends formatted Adaptive Card messages to a Microsoft Teams channel via an Incom
 ### 1. Read webhook URL from config
 
 ```powershell
-$ratatoskRoot = Split-Path -Parent $PSScriptRoot
-$configPath = Join-Path $ratatoskRoot "config.local.yaml"
+$autotaskRoot = Split-Path -Parent $PSScriptRoot
+$configPath = Join-Path $autotaskRoot "config.local.yaml"
 $configContent = Get-Content $configPath -Raw
 
 # Extract teams_webhook_url from YAML (simple key: value parsing)
@@ -184,7 +184,7 @@ $card = @{
             version = "1.5"
             msteams = @{ width = "Full" }
             body = @(
-                @{ type = "TextBlock"; text = "Ratatosk Daily Summary"; weight = "Bolder"; size = "Large" }
+                @{ type = "TextBlock"; text = "Autotask Daily Summary"; weight = "Bolder"; size = "Large" }
                 @{
                     type = "Table"
                     columns = @(

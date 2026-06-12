@@ -1,10 +1,10 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
-    Ratatosk orchestrator installer.
+    Autotask orchestrator installer.
 .DESCRIPTION
     Sets up directories, configuration, and CLI-specific entrypoints for the
-    Ratatosk orchestrator. Run from any directory; paths are absolute.
+    Autotask orchestrator. Run from any directory; paths are absolute.
 #>
 [CmdletBinding()]
 param(
@@ -34,7 +34,7 @@ $orchestratorRoot  = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $setupDir          = Join-Path $orchestratorRoot 'setup'
 $commandsDir       = Join-Path $orchestratorRoot 'commands'
 $claudeCommandsDir = Join-Path $env:USERPROFILE '.claude' 'commands'
-$copilotHelperPath = Join-Path $orchestratorRoot 'tools\invoke-ratatosk-copilot.ps1'
+$copilotHelperPath = Join-Path $orchestratorRoot 'tools\invoke-autotask-copilot.ps1'
 $templateFile      = Join-Path $orchestratorRoot 'config.local.yaml.template'
 $localConfigFile   = Join-Path $orchestratorRoot 'config.local.yaml'
 
@@ -43,7 +43,7 @@ $artifactsCacheDir = Join-Path $orchestratorRoot 'artifacts-cache'
 
 Write-Host ''
 Write-Host '=========================================' -ForegroundColor Magenta
-Write-Host '  Ratatosk Orchestrator Installer v1.0'   -ForegroundColor Magenta
+Write-Host '  Autotask Orchestrator Installer v1.0'   -ForegroundColor Magenta
 Write-Host '=========================================' -ForegroundColor Magenta
 Write-Host ''
 
@@ -88,7 +88,7 @@ if ($copilotInstalled) {
 }
 
 if (-not ($claudeInstalled -or $copilotInstalled)) {
-    throw 'Either Claude CLI or GitHub Copilot CLI must be installed to use Ratatosk.'
+    throw 'Either Claude CLI or GitHub Copilot CLI must be installed to use Autotask.'
 }
 
 $defaultWorkerCli = if ($claudeInstalled -and $copilotInstalled) { 'auto' } elseif ($claudeInstalled) { 'claude' } else { 'copilot' }
@@ -163,10 +163,10 @@ if ($claudeInstalled) {
     }
 
     $commandFiles = @(
-        'ratatosk-start.md',
-        'ratatosk-queue.md',
-        'ratatosk-status.md',
-        'ratatosk-wrapup.md'
+        'autotask-start.md',
+        'autotask-queue.md',
+        'autotask-status.md',
+        'autotask-wrapup.md'
     )
 
     foreach ($cmd in $commandFiles) {
@@ -222,6 +222,6 @@ if ($copilotInstalled) {
     Write-Ok "Copilot helper    : $copilotHelperPath"
 }
 Write-Host ''
-Write-Ok 'Ratatosk installation complete.'
-Write-Host 'Claude Code / Copilot CLI: run /ratatosk-start to begin.' -ForegroundColor Cyan
+Write-Ok 'Autotask installation complete.'
+Write-Host 'Claude Code / Copilot CLI: run /autotask-start to begin.' -ForegroundColor Cyan
 Write-Host ''

@@ -1,10 +1,10 @@
----
-description: "Start Ratatosk task orchestrator - fetch tasks, pick, spawn workers"
+﻿---
+description: "Start Autotask task orchestrator - fetch tasks, pick, spawn workers"
 ---
 
-# Ratatosk Start
+# Autotask Start
 
-You are the Ratatosk orchestrator. Follow these steps precisely to fetch tasks, let the user pick, and spawn workers.
+You are the Autotask orchestrator. Follow these steps precisely to fetch tasks, let the user pick, and spawn workers.
 
 ## Autopilot Mode (Copilot CLI)
 
@@ -30,7 +30,7 @@ Verify the configured issue source is reachable:
 
 Read `config.local.yaml` to determine `worker_cli`. If the key is absent, default to `claude`.
 
-Also run `tools\get-ratatosk-system-health.ps1` and inspect the returned readiness snapshot before launching any workers. If it returns `blocked`, stop and show the blocking reasons. If it returns `degraded`, continue only after surfacing the warnings clearly to the user.
+Also run `tools\get-autotask-system-health.ps1` and inspect the returned readiness snapshot before launching any workers. If it returns `blocked`, stop and show the blocking reasons. If it returns `degraded`, continue only after surfacing the warnings clearly to the user.
 
 - **If `worker_cli` is `auto`**:
   - If the active host is Copilot, resolve worker CLI to `copilot`.
@@ -58,7 +58,7 @@ Extract key values: `issue_source.adapter`, `repo_groups`, `dashboard_port`, `wo
 
 ## Step 4: Fetch Issues
 
-Run `tools\get-ratatosk-startable-jobs.ps1` (no extra arguments needed — it reads adapter config internally). This script calls `bun tools/query-issue-source.ts` for the configured adapter and returns a `startableJobs` JSON array. Parse the returned JSON.
+Run `tools\get-autotask-startable-jobs.ps1` (no extra arguments needed — it reads adapter config internally). This script calls `bun tools/query-issue-source.ts` for the configured adapter and returns a `startableJobs` JSON array. Parse the returned JSON.
 
 ## Step 5: Parse, Deduplicate, Score, Sort
 
@@ -73,7 +73,7 @@ Run `tools\get-ratatosk-startable-jobs.ps1` (no extra arguments needed — it re
 
 ## Step 6: Load Waiting Queue
 
-Read `temp/state.json`. If it exists, load any items in the `waitingQueue` array. These are tasks previously queued via `/ratatosk-queue`.
+Read `temp/state.json`. If it exists, load any items in the `waitingQueue` array. These are tasks previously queued via `/autotask-queue`.
 
 ## Step 7: Present Task Table
 
@@ -161,40 +161,40 @@ Write a worker entry to `temp/state.json` under the `workers` array:
 }
 ```
 
-Store Ratatosk-managed paths in `temp/state.json` relative to the repository root (for example `workspaces\GH-123`). Use the fully resolved `workspacePath` variable only when launching tools that require a filesystem path.
+Store Autotask-managed paths in `temp/state.json` relative to the repository root (for example `workspaces\GH-123`). Use the fully resolved `workspacePath` variable only when launching tools that require a filesystem path.
 
 ### 9d. Write Prompt File and Spawn Windows Terminal Tab
 
 First, write a prompt file to the workspace:
 
 ```path
-{workspacePath}/.ratatosk-prompt.md
+{workspacePath}/.autotask-prompt.md
 ```
 
 With contents:
 
 ```markdown
-You are Ratatosk Task Worker for {issueId}.
+You are Autotask Task Worker for {issueId}.
 Read your full instructions from `..\..\agents\task-worker.md`.
 Your workspace is {workspacePath}.
 Your issue ID is {issueId}, title is "{title}", labels are {labels}.
 repos: {repos as JSON array — e.g. [{"name":"my-repo","path":"{workspacePath}\\my-repo","remoteName":"origin"}]}
 Keep the existing terminal tab title exactly as launched. Do not rename the terminal tab or set an application title.
-Publish your live activity via `..\..\tools\set-ratatosk-worker-activity.ps1` using granular statuses such as starting, workspace-verify, syncing, planning, thinking, researching, triaging, designing, implementing, coding, building, validating, testing, documenting, reviewing, creating-pr, waiting-review, awaiting-user-input, input-received, retrying, blocked, completed, and failed. Update it often whenever your actual work changes.
-If you need a user decision, use `..\..\tools\request-ratatosk-user-input.ps1` and then wait with `..\..\tools\wait-for-ratatosk-user-input.ps1`.
-When you finish or fail, do not stop silently. Run `..\..\tools\finalize-ratatosk-worker.ps1` so Ratatosk always captures a final report, updates temp/state.json, and sends the completion or failure report.
+Publish your live activity via `..\..\tools\set-autotask-worker-activity.ps1` using granular statuses such as starting, workspace-verify, syncing, planning, thinking, researching, triaging, designing, implementing, coding, building, validating, testing, documenting, reviewing, creating-pr, waiting-review, awaiting-user-input, input-received, retrying, blocked, completed, and failed. Update it often whenever your actual work changes.
+If you need a user decision, use `..\..\tools\request-autotask-user-input.ps1` and then wait with `..\..\tools\wait-for-autotask-user-input.ps1`.
+When you finish or fail, do not stop silently. Run `..\..\tools\finalize-autotask-worker.ps1` so Autotask always captures a final report, updates temp/state.json, and sends the completion or failure report.
 Begin work immediately.
 ```
 
 Then spawn the terminal tab using the shared worker launcher:
 
 ```powershell
-& ".\tools\launch-ratatosk-worker.ps1" `
+& ".\tools\launch-autotask-worker.ps1" `
   -Cli "{worker_cli}" `
   -IssueId "{issueId}" `
   -Title "{title}" `
   -WorkspacePath "{workspacePath}" `
-  -PromptFile "{workspacePath}\.ratatosk-prompt.md" `
+  -PromptFile "{workspacePath}\.autotask-prompt.md" `
   -PluginDir "."
 ```
 
@@ -213,7 +213,7 @@ node .\dashboard\server.js &
 
 Send notifications about the spawned tasks:
 
-- **Teams**: Use the notification template to send: "Ratatosk: {N} tasks started" with a list of issue IDs and titles.
+- **Teams**: Use the notification template to send: "Autotask: {N} tasks started" with a list of issue IDs and titles.
 - **Email**: Send the same summary via email notification.
 
 ## Step 12: Print Summary

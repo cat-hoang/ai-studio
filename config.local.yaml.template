@@ -1,9 +1,9 @@
-# Ratatosk per-machine configuration
+﻿# Autotask per-machine configuration
 # Copy this to config.local.yaml and fill in your values.
 # config.local.yaml is gitignored.
 
 worker_cli: "auto"                             # Worker launcher: auto, claude, or copilot
-workspace_root: ""                             # Absolute path to your workspaces directory (e.g. C:\dev\ratatosk\workspaces)
+workspace_root: ""                             # Absolute path to your workspaces directory (e.g. C:\dev\autotask\workspaces)
 artifacts_cache: ""                            # Absolute path to build artifact cache directory
 
 # ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ teams_chat_target_mode: "self"                 # self, person, chat, or conversa
 teams_chat_target: ""                          # Required for person, chat, or conversation-id
 teams_chat_command_polling_enabled: false
 teams_chat_command_send_replies: true
-teams_chat_command_prefix: "ratatosk:"
+teams_chat_command_prefix: "autotask:"
 teams_chat_polling_interval_ms: 30000
 smtp_server: "smtp.office365.com"
 smtp_from: ""
@@ -72,7 +72,7 @@ email_polling_interval_ms: 30000
 email_poll_folder_path: "Inbox"
 email_command_intake_enabled: false
 email_command_send_replies: true
-email_command_subject_prefix: "Ratatosk Command"
+email_command_subject_prefix: "Autotask Command"
 email_command_allowed_senders: ""
 
 # ---------------------------------------------------------------------------

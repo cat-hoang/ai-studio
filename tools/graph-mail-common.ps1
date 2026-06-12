@@ -1,21 +1,21 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:RatatoskRoot = Split-Path -Parent $PSScriptRoot
-$script:RatatoskLocalConfigPath = Join-Path $script:RatatoskRoot 'config.local.yaml'
-$script:RatatoskTokenCachePath = Join-Path $script:RatatoskRoot '.oauth-token-cache.json'
-$script:RatatoskTenantId = '8b493985-e1b4-4b95-ade6-98acafdbdb01'
-$script:RatatoskClientId = 'd3590ed6-52b3-4102-aeff-aad2292ab01c'
+$script:AutotaskRoot = Split-Path -Parent $PSScriptRoot
+$script:AutotaskLocalConfigPath = Join-Path $script:AutotaskRoot 'config.local.yaml'
+$script:AutotaskTokenCachePath = Join-Path $script:AutotaskRoot '.oauth-token-cache.json'
+$script:AutotaskTenantId = '8b493985-e1b4-4b95-ade6-98acafdbdb01'
+$script:AutotaskClientId = 'd3590ed6-52b3-4102-aeff-aad2292ab01c'
 
-function Get-RatatoskConfigContent {
-    if (-not (Test-Path -LiteralPath $script:RatatoskLocalConfigPath)) {
-        throw "Config file not found: $script:RatatoskLocalConfigPath"
+function Get-AutotaskConfigContent {
+    if (-not (Test-Path -LiteralPath $script:AutotaskLocalConfigPath)) {
+        throw "Config file not found: $script:AutotaskLocalConfigPath"
     }
 
-    return Get-Content -LiteralPath $script:RatatoskLocalConfigPath -Raw
+    return Get-Content -LiteralPath $script:AutotaskLocalConfigPath -Raw
 }
 
-function Get-RatatoskConfigValue {
+function Get-AutotaskConfigValue {
     param(
         [Parameter(Mandatory)]
         [string]$Content,
@@ -100,7 +100,7 @@ function Save-GraphTokenCache {
         scopes = @($Scopes | Select-Object -Unique)
     }
 
-    $tokenData | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $script:RatatoskTokenCachePath -Encoding UTF8
+    $tokenData | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $script:AutotaskTokenCachePath -Encoding UTF8
 }
 
 function Get-CacheValue {
@@ -132,8 +132,8 @@ function Get-GraphAccessToken {
 
     $scopeString = ConvertTo-GraphScopeString -Scopes $Scopes
 
-    if (Test-Path -LiteralPath $script:RatatoskTokenCachePath) {
-        $cache = Get-Content -LiteralPath $script:RatatoskTokenCachePath -Raw | ConvertFrom-Json
+    if (Test-Path -LiteralPath $script:AutotaskTokenCachePath) {
+        $cache = Get-Content -LiteralPath $script:AutotaskTokenCachePath -Raw | ConvertFrom-Json
         $cacheScopes = @(Get-CacheValue -Cache $cache -Name 'scopes' -Default @())
         $expiresOn = Get-CacheValue -Cache $cache -Name 'expires_on' -Default 0
         $accessToken = [string](Get-CacheValue -Cache $cache -Name 'access_token' -Default '')
@@ -147,13 +147,13 @@ function Get-GraphAccessToken {
         if ($refreshToken) {
             try {
                 $refreshBody = @{
-                    client_id = $script:RatatoskClientId
+                    client_id = $script:AutotaskClientId
                     grant_type = 'refresh_token'
                     refresh_token = $refreshToken
                     scope = $scopeString
                 }
 
-                $response = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:RatatoskTenantId/oauth2/v2.0/token" -Method POST -ContentType 'application/x-www-form-urlencoded' -Body $refreshBody
+                $response = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:AutotaskTenantId/oauth2/v2.0/token" -Method POST -ContentType 'application/x-www-form-urlencoded' -Body $refreshBody
                 $resolvedRefreshToken = if ($response.PSObject.Properties['refresh_token'] -and $response.refresh_token) { $response.refresh_token } else { $refreshToken }
                 Save-GraphTokenCache -AccessToken $response.access_token -RefreshToken $resolvedRefreshToken -ExpiresOn ([DateTimeOffset]::UtcNow.AddSeconds($response.expires_in).ToUnixTimeSeconds()) -Scopes $Scopes
                 return $response.access_token
@@ -165,14 +165,14 @@ function Get-GraphAccessToken {
 
     Write-Host 'Requesting device code for Microsoft login...'
     $deviceCodeBody = @{
-        client_id = $script:RatatoskClientId
+        client_id = $script:AutotaskClientId
         scope = $scopeString
     }
 
-    $deviceResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:RatatoskTenantId/oauth2/v2.0/devicecode" -Method POST -ContentType 'application/x-www-form-urlencoded' -Body $deviceCodeBody
+    $deviceResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:AutotaskTenantId/oauth2/v2.0/devicecode" -Method POST -ContentType 'application/x-www-form-urlencoded' -Body $deviceCodeBody
     $deviceCodeMessage = $deviceResponse.message
     Write-Host $deviceCodeMessage
-    $logPath = Join-Path $script:RatatoskRoot 'device-code.log'
+    $logPath = Join-Path $script:AutotaskRoot 'device-code.log'
     "$(Get-Date -Format 'o') [device-code] $deviceCodeMessage" | Set-Content -LiteralPath $logPath -Encoding UTF8
     Start-Process $deviceResponse.verification_uri
 
@@ -187,12 +187,12 @@ function Get-GraphAccessToken {
 
         try {
             $tokenBody = @{
-                client_id = $script:RatatoskClientId
+                client_id = $script:AutotaskClientId
                 grant_type = 'urn:ietf:params:oauth:grant-type:device_code'
                 device_code = $deviceResponse.device_code
             }
 
-            $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:RatatoskTenantId/oauth2/v2.0/token" -Method POST -ContentType 'application/x-www-form-urlencoded' -Body $tokenBody
+            $tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:AutotaskTenantId/oauth2/v2.0/token" -Method POST -ContentType 'application/x-www-form-urlencoded' -Body $tokenBody
             break
         } catch {
             $errBody = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue

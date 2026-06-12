@@ -1,4 +1,4 @@
-name: ratatosk
+﻿name: autotask
 version: "1.0.0"
 branch_prefix: ""  # Branch naming prefix (e.g., ABC). Defaults to staff_code if empty.
 dashboard_port: 3210
@@ -37,7 +37,7 @@ issue_source:
     per_page: "50"
   # File — used when adapter = file  (useful for testing / custom pipelines)
   file:
-    path: issues.json             # path relative to ratatosk root, or absolute
+    path: issues.json             # path relative to autotask root, or absolute
 
 # ---------------------------------------------------------------------------
 # Studio mode (Phase 2 — agent team pipeline, coming soon)
@@ -80,10 +80,10 @@ model_routing:
   triage: "opus"
   default: "sonnet"
 email_polling_interval_ms: 30000
-email_poll_folder_path: "Inbox/Ratatosk"
+email_poll_folder_path: "Inbox/Autotask"
 email_command_intake_enabled: false
 email_command_send_replies: true
-email_command_subject_prefix: "Ratatosk Command"
+email_command_subject_prefix: "Autotask Command"
 email_command_allowed_senders: ""
 teams_webhook_enabled: false
 autonomy_mode: "suggestions-only"  # suggestions-only or auto

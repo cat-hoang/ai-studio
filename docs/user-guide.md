@@ -1,12 +1,12 @@
-# Ratatosk User Guide
+﻿# Autotask User Guide
 
 ## Overview
 
-Ratatosk is a local orchestrator for WiseTech work items. It watches for startable work, keeps a queue of jobs, launches autonomous AI workers in dedicated workspaces, and gives you a local dashboard for oversight and control.
+Autotask is a local orchestrator for WiseTech work items. It watches for startable work, keeps a queue of jobs, launches autonomous AI workers in dedicated workspaces, and gives you a local dashboard for oversight and control.
 
-The shared core is generic. Your local configuration and any matching domain plugins decide which repos, instructions, and helper resources Ratatosk uses for a given task.
+The shared core is generic. Your local configuration and any matching domain plugins decide which repos, instructions, and helper resources Autotask uses for a given task.
 
-At a high level, Ratatosk does five things:
+At a high level, Autotask does five things:
 
 1. Polls for startable work from your configured buffer board source
 2. Tracks queued, running, completed, and failed jobs in `state.json`
@@ -28,9 +28,9 @@ The orchestrator is the shared control plane. It owns:
 
 ### Workers
 
-Each worker is an AI session dedicated to one job and, when known, one task sequence. Workers run in a dedicated workspace under your configured `workspace_root` and publish live activity back to Ratatosk.
+Each worker is an AI session dedicated to one job and, when known, one task sequence. Workers run in a dedicated workspace under your configured `workspace_root` and publish live activity back to Autotask.
 
-Workers are launched in **Windows Terminal tabs** and keep the tab title fixed so Ratatosk can find the tab again later.
+Workers are launched in **Windows Terminal tabs** and keep the tab title fixed so Autotask can find the tab again later.
 
 ### Startable poller
 
@@ -42,7 +42,7 @@ The dashboard is the main operator surface. It shows poller health, autonomy sta
 
 ### Notifications and replies
 
-Ratatosk supports:
+Autotask supports:
 
 - **Dashboard** for immediate local control
 - **Email** for asynchronous replies and structured commands
@@ -62,13 +62,13 @@ Teams can still run in the old notify-only webhook mode, but it can now also use
 
 ### First-time setup
 
-Run the installer from the Ratatosk repository root:
+Run the installer from the Autotask repository root:
 
 ~~~powershell
 .\setup\install.ps1
 ~~~
 
-The installer verifies prerequisites, creates local config scaffolding, prepares dashboard dependencies, and sets up Ratatosk for your current CLI environment.
+The installer verifies prerequisites, creates local config scaffolding, prepares dashboard dependencies, and sets up Autotask for your current CLI environment.
 
 The most important local settings live in `config.local.yaml`:
 
@@ -81,24 +81,24 @@ The most important local settings live in `config.local.yaml`:
 
 ## Usage options and economics
 
-Ratatosk can be orchestrated from either **GitHub Copilot CLI** or **Claude Code CLI**.
+Autotask can be orchestrated from either **GitHub Copilot CLI** or **Claude Code CLI**.
 
 ### Option A — GitHub Copilot CLI (most economical)
 
-1. Open a terminal in the Ratatosk folder.
+1. Open a terminal in the Autotask folder.
 2. Start Copilot with the GPT-5 mini model (0× premium requests for the orchestrator):
    ```
    copilot -i --model gpt-5-mini --plugin-dir .
    ```
-3. Tell Copilot: **"start ratatosk server"**
+3. Tell Copilot: **"start autotask server"**
 4. Subsequent task agents launch with Copilot CLI.
 5. Each task agent (e.g. Sonnet 4.6) normally consumes **1 premium request**. Running the orchestrator on GPT-5 mini costs 0 premium requests.
 
 ### Option B — Claude Code CLI
 
-1. Open a terminal in the Ratatosk folder.
+1. Open a terminal in the Autotask folder.
 2. Start Claude Code: `claude`
-3. Tell Claude: **"start ratatosk server"**
+3. Tell Claude: **"start autotask server"**
 4. Subsequent task agents launch with Claude Code.
 5. Token spend per task varies with task complexity.
 
@@ -111,10 +111,10 @@ Ratatosk can be orchestrated from either **GitHub Copilot CLI** or **Claude Code
 Run:
 
 ~~~text
-/ratatosk-start
+/autotask-start
 ~~~
 
-Ratatosk will:
+Autotask will:
 
 1. Read your configuration
 2. Check connectivity prerequisites such as VPN-backed services
@@ -124,20 +124,20 @@ Ratatosk will:
 6. Start one worker tab per selected task
 7. Start the dashboard server if it is not already running
 
-When Ratatosk infers a repo set, it offers these workspace choices:
+When Autotask infers a repo set, it offers these workspace choices:
 
 - **`A`** or blank: clone all inferred repos
 - **`N`**: reference mode, no clone, work read-only against configured source paths
 - **`1,3`** style selection: clone only the chosen repos
 
-Ratatosk records that choice so retries and resumes can reuse the same workspace strategy.
+Autotask records that choice so retries and resumes can reuse the same workspace strategy.
 
 ### During the day
 
 Use either:
 
 ~~~text
-/ratatosk-status
+/autotask-status
 ~~~
 
 or the dashboard:
@@ -161,20 +161,20 @@ Typical day-to-day actions are:
 Run:
 
 ~~~text
-/ratatosk-wrapup
+/autotask-wrapup
 ~~~
 
 Wrap-up verifies PRs, pauses running work safely, writes end-of-day context, and sends the daily summary. It **does not automatically delete workspaces**.
 
 ### Locking your computer
 
-Locking the screen is generally fine. Existing Ratatosk processes and worker tabs usually keep running because they stay in your logged-in session.
+Locking the screen is generally fine. Existing Autotask processes and worker tabs usually keep running because they stay in your logged-in session.
 
-What stops Ratatosk is **sleep, hibernate, sign-out, reboot, VPN loss, or network loss**. If you want Ratatosk to keep working while you are away, lock the machine but keep it awake.
+What stops Autotask is **sleep, hibernate, sign-out, reboot, VPN loss, or network loss**. If you want Autotask to keep working while you are away, lock the machine but keep it awake.
 
 ## Command channels
 
-Ratatosk has three operator command channels:
+Autotask has three operator command channels:
 
 1. **Slash commands** for high-level workflows
 2. **Dashboard manual command bar** for exact job/task control
@@ -187,11 +187,11 @@ These channels do **not** all support the same command set, so the sections belo
 
 | Command | Purpose |
 | ------- | ------- |
-| `/ratatosk-start` | Fetch work, choose tasks, and spawn workers |
-| `/ratatosk-status` | Show current queue and worker state |
-| `/ratatosk-queue WI00975129` | Queue a job manually |
-| `/ratatosk-queue WI00975129 CDF "Description here"` | Queue a job with explicit task type and description |
-| `/ratatosk-wrapup` | Verify PRs, pause work safely, and send a summary |
+| `/autotask-start` | Fetch work, choose tasks, and spawn workers |
+| `/autotask-status` | Show current queue and worker state |
+| `/autotask-queue WI00975129` | Queue a job manually |
+| `/autotask-queue WI00975129 CDF "Description here"` | Queue a job with explicit task type and description |
+| `/autotask-wrapup` | Verify PRs, pause work safely, and send a summary |
 
 Use slash commands for the main daily workflow. Use the dashboard/manual command bar when you need precise task-sequence control.
 
@@ -205,7 +205,7 @@ The **Commands** card in the dashboard accepts the following syntax. Click **Man
 | `queue <WI> [--task <seq>] [type] [desc]` | Add a job to the waiting queue without launching |
 | `resume <WI> [--task <seq>]` | Resume a paused worker |
 | `retry <WI> [--task <seq>]` | Retry a failed worker |
-| `cleanup <WI> [--task <seq>]` | Remove the job from Ratatosk state and keep the workspace on disk |
+| `cleanup <WI> [--task <seq>]` | Remove the job from Autotask state and keep the workspace on disk |
 | `status [WI] [--task <seq>]` | Show overall status, or a specific job when a job number is supplied |
 | `notes <WI> --task <seq>` | Read ediProd task notes for the specified job/task |
 | `never-auto <WI> --task <seq>` | Prevent that specific task from being auto-started |
@@ -216,7 +216,7 @@ Notes:
 
 - `never-auto` and `allow-auto` are **per task**, so include `--task <seq>`.
 - `start` bypasses auto-launch guardrails and launches immediately.
-- `cleanup` removes the card from Ratatosk state but intentionally preserves the workspace folder for manual inspection.
+- `cleanup` removes the card from Autotask state but intentionally preserves the workspace folder for manual inspection.
 - `notes` reads ediProd task notes. To edit notes, use the **Notes** button on a startable or waiting card (opens the Notes modal).
 - Worker-reply commands exist, but they matter only when a worker explicitly opens a user-input request. See the input section or `docs/email-guide.md` if you need that path.
 
@@ -253,20 +253,20 @@ Direct Teams commands are available only when:
 The message must start with the configured prefix, which defaults to:
 
 ~~~text
-ratatosk:
+autotask:
 ~~~
 
 Examples:
 
-- `ratatosk: status`
-- `ratatosk: start WI00975129 --task 423`
-- `ratatosk: retry WI00975129 --task 423`
-- `ratatosk: cleanup WI00975129 --task 423`
-- `ratatosk: reply WI00975129 Use option A`
-- `ratatosk: notes WI00975129 --task 423`
-- `ratatosk: setnotes WI00975129 --task 423 Your note content here`
+- `autotask: status`
+- `autotask: start WI00975129 --task 423`
+- `autotask: retry WI00975129 --task 423`
+- `autotask: cleanup WI00975129 --task 423`
+- `autotask: reply WI00975129 Use option A`
+- `autotask: notes WI00975129 --task 423`
+- `autotask: setnotes WI00975129 --task 423 Your note content here`
 
-Teams command polling uses the same Ratatosk command parser as the email path, so replies to workers can go through the same `reply` / `answer` syntax.
+Teams command polling uses the same Autotask command parser as the email path, so replies to workers can go through the same `reply` / `answer` syntax.
 `never-auto` / `allow-auto` remain dashboard-only.
 
 For `setnotes`, multi-line content is supported: send the command on one line and the note body on the following lines in the same Teams message.
@@ -294,7 +294,7 @@ The header shows:
 
 ### Poller cards
 
-Ratatosk currently surfaces:
+Autotask currently surfaces:
 
 - **Mail Poller**
 - **Teams Poller** when Teams direct chat is configured
@@ -320,10 +320,10 @@ The Autonomy card lets you change:
 
 Current autonomy modes are:
 
-- **`suggestions-only`**: Ratatosk shows startable work but does not launch automatically
-- **`auto`**: Ratatosk automatically launches startable work while health and worker-budget guardrails allow it
+- **`suggestions-only`**: Autotask shows startable work but does not launch automatically
+- **`auto`**: Autotask automatically launches startable work while health and worker-budget guardrails allow it
 
-The card also shows Ratatosk's current auto-launch state:
+The card also shows Autotask's current auto-launch state:
 
 - **idle**
 - **blocked**
@@ -398,13 +398,13 @@ Common card actions:
 - **Notes** on startable and waiting cards — opens the ediProd task notes viewer/editor
 - **Cleanup** on completed or failed jobs
 
-Cleanup behavior is intentionally conservative: it removes the task from Ratatosk state and leaves the workspace on disk.
+Cleanup behavior is intentionally conservative: it removes the task from Autotask state and leaves the workspace on disk.
 
 ## Autonomy and startable polling
 
 ### Automatic launch rules
 
-When `autonomy_mode: auto`, Ratatosk evaluates startable work continuously and tries to fill available worker slots.
+When `autonomy_mode: auto`, Autotask evaluates startable work continuously and tries to fill available worker slots.
 
 Auto-launch is blocked when:
 
@@ -429,7 +429,7 @@ The startable poller:
 - the BM OData path queries `P9Logs` for SRT events first, expanding the `Parent` task to filter server-side — only tasks that have become startable (SRT log) and are still in ASN status are returned
 - fetches tasks assigned to your staff code **plus** unassigned tasks whose required capability matches any code in `staff_capabilities`
 - capability Guids are resolved once per config-change and cached in `temp/staff-capability-guids.json`; the cache auto-refreshes when `staff_capabilities` codes change
-- writes its result into Ratatosk's in-memory startable cache
+- writes its result into Autotask's in-memory startable cache
 - surfaces status and warnings in the dashboard
 - triggers the autonomy evaluator after each successful refresh
 
@@ -445,11 +445,11 @@ Relevant config:
 
 ### Dashboard replies
 
-The dashboard is the fastest way to answer a worker when Ratatosk explicitly asks for input. In normal day-to-day use you may never need this path; it appears only when a worker raises a user-input request.
+The dashboard is the fastest way to answer a worker when Autotask explicitly asks for input. In normal day-to-day use you may never need this path; it appears only when a worker raises a user-input request.
 
 ### Email replies
 
-When a worker asks a question, Ratatosk can send an email with a request identifier in the subject. Reply to that email and keep the subject unchanged.
+When a worker asks a question, Autotask can send an email with a request identifier in the subject. Reply to that email and keep the subject unchanged.
 
 Email replies are asynchronous and depend on the email poller interval and Microsoft Graph access.
 
@@ -464,7 +464,7 @@ Teams is used for outbound notifications and, when Teams command polling is enab
 - queue added
 - daily summary
 
-If `teams_chat_command_polling_enabled: true`, you can also send `ratatosk:` prefixed commands directly in the configured chat. See `docs/teams-guide.md` for the full command list.
+If `teams_chat_command_polling_enabled: true`, you can also send `autotask:` prefixed commands directly in the configured chat. See `docs/teams-guide.md` for the full command list.
 
 ## Workspaces, cleanup, and lifecycle
 
@@ -472,17 +472,17 @@ If `teams_chat_command_polling_enabled: true`, you can also send `ratatosk:` pre
 
 Each worker uses a dedicated workspace under `workspace_root`.
 
-Ratatosk may:
+Autotask may:
 
 - clone inferred repos
 - clone only a selected subset
 - run in reference mode against existing local repos
 
-Ratatosk also keeps an `artifacts-cache` for shared build artifacts so repeated tasks can reuse previously downloaded assets.
+Autotask also keeps an `artifacts-cache` for shared build artifacts so repeated tasks can reuse previously downloaded assets.
 
 ### Worker launcher
 
-Workers are launched through `tools\launch-ratatosk-worker.ps1`.
+Workers are launched through `tools\launch-autotask-worker.ps1`.
 
 `worker_cli` supports:
 
@@ -490,21 +490,21 @@ Workers are launched through `tools\launch-ratatosk-worker.ps1`.
 - `claude`
 - `copilot`
 
-When `worker_cli: auto`, Ratatosk resolves the active CLI based on host environment and command availability.
+When `worker_cli: auto`, Autotask resolves the active CLI based on host environment and command availability.
 
 ### Cleanup
 
 Current cleanup behavior is intentionally safe:
 
-- dashboard **Cleanup** removes the task record from Ratatosk state
-- command-based **cleanup** removes the task record from Ratatosk state
+- dashboard **Cleanup** removes the task record from Autotask state
+- command-based **cleanup** removes the task record from Autotask state
 - workspaces are **preserved**
 
 Delete the workspace manually only when you are sure you no longer need logs, artifacts, branches, or partial results.
 
 ### Wrap-up behavior
 
-`/ratatosk-wrapup` keeps workspaces intact. It does not treat completion as permission to delete the whole workspace automatically.
+`/autotask-wrapup` keeps workspaces intact. It does not treat completion as permission to delete the whole workspace automatically.
 
 ## Configuration reference
 
@@ -516,7 +516,7 @@ Delete the workspace manually only when you are sure you no longer need logs, ar
 | `buffer_board_url` | Base URL used to resolve the board/PAVE source | `http://localhost:6610/` |
 | `crikey_base_url` | Crikey server for shared build artifacts | `https://crikey.wtg.zone` |
 | `email_polling_interval_ms` | Email reply/command polling interval | `30000` |
-| `email_poll_folder_path` | Shared default mail folder | `Inbox/Ratatosk` |
+| `email_poll_folder_path` | Shared default mail folder | `Inbox/Autotask` |
 | `autonomy_mode` | Automatic launch mode | `suggestions-only` |
 | `max_concurrent_workers` | Max simultaneous workers | `3` |
 | `autonomy_max_workers_per_repo_group` | Soft per repo-family auto-launch cap | `1` |
@@ -532,7 +532,7 @@ Delete the workspace manually only when you are sure you no longer need logs, ar
 | Setting | Purpose |
 | ------- | ------- |
 | `staff_code` | Your staff code |
-| `board_name` | The board Ratatosk should watch |
+| `board_name` | The board Autotask should watch |
 | `worker_cli` | `auto`, `claude`, or `copilot` |
 | `workspace_root` | Workspace root directory |
 | `artifacts_cache` | Shared artifacts cache path |

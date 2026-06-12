@@ -1,18 +1,18 @@
-# Ratatosk Notifications and Email Delivery
+﻿# Autotask Notifications and Email Delivery
 
-This document explains how Ratatosk sends notifications and recent repository changes made to aid diagnosis and reliability.
+This document explains how Autotask sends notifications and recent repository changes made to aid diagnosis and reliability.
 
 ## Notification events
 
-Ratatosk sends notifications for these events:
+Autotask sends notifications for these events:
 
 | Event | Sent by | Channels |
 | ----- | ------- | -------- |
-| Task started | `start-ratatosk-worker.ps1` | Email, Teams |
-| Task completed | `finalize-ratatosk-worker.ps1` | Email, Teams |
-| Task failed | `finalize-ratatosk-worker.ps1` | Email, Teams |
-| User input needed | `finalize-ratatosk-worker.ps1` | Email, Teams |
-| Daily summary / status report | `/ratatosk-status` or on-demand | Email, Teams |
+| Task started | `start-autotask-worker.ps1` | Email, Teams |
+| Task completed | `finalize-autotask-worker.ps1` | Email, Teams |
+| Task failed | `finalize-autotask-worker.ps1` | Email, Teams |
+| User input needed | `finalize-autotask-worker.ps1` | Email, Teams |
+| Daily summary / status report | `/autotask-status` or on-demand | Email, Teams |
 
 ## Notification content
 
@@ -38,12 +38,12 @@ Ratatosk sends notifications for these events:
   - Task number and type
   - Work item title
   - 🚫 badge when the task has Never Auto set
-  - Copyable `ratatosk: start WI... --task N` command
+  - Copyable `autotask: start WI... --task N` command
 
 ## Implementation notes
 
-- "Task Started" notifications are sent by `start-ratatosk-worker.ps1` when a worker launches.
-- "Task Completed" / failure notifications are sent by `finalize-ratatosk-worker.ps1` when finalize completes.
+- "Task Started" notifications are sent by `start-autotask-worker.ps1` when a worker launches.
+- "Task Completed" / failure notifications are sent by `finalize-autotask-worker.ps1` when finalize completes.
 - Finalize records the result of the email send in `state.json` on the completed/failed job object under `lastEmailResult` for easier auditing.
 - Start script was relaxed to avoid blocking starts when a completed job exists for a different taskSequence.
 - OAuth token cache `.oauth-token-cache.json` must live under `temp\` (moved there if present).

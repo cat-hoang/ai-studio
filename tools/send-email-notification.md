@@ -1,4 +1,4 @@
----
+﻿---
 name: send-email-notification
 description: Sends email notifications via SMTP using HTML templates. Supports task summaries, daily reports, and failure alerts.
 parameters:
@@ -26,8 +26,8 @@ Sends formatted HTML email notifications via SMTP for task lifecycle events and 
 ### 1. Read SMTP settings from config
 
 ```powershell
-$ratatoskRoot = Split-Path -Parent $PSScriptRoot
-$configPath = Join-Path $ratatoskRoot "config.local.yaml"
+$autotaskRoot = Split-Path -Parent $PSScriptRoot
+$configPath = Join-Path $autotaskRoot "config.local.yaml"
 $configContent = Get-Content $configPath -Raw
 
 function Get-YamlValue($content, $key) {
@@ -44,19 +44,19 @@ $smtpTo     = Get-YamlValue $configContent "smtp_to"
 
 Required config keys in `config.local.yaml`:
 - `smtp_server`: SMTP relay hostname (e.g., `mail.wtg.zone`)
-- `smtp_from`: Sender address (e.g., `ratatosk@wtg.zone`)
+- `smtp_from`: Sender address (e.g., `autotask@wtg.zone`)
 - `smtp_to`: Recipient address or semicolon-separated list
 
 ### 2. Build HTML email body by template
 
 #### task-summary
 
-Subject: `Ratatosk: {jobNumber} - {status}`
+Subject: `Autotask: {jobNumber} - {status}`
 
 ```powershell
 $prLinksHtml = ($data.prUrls | ForEach-Object { "<li><a href='$_'>$_</a></li>" }) -join ""
 
-$subject = "Ratatosk: $($data.jobNumber) - $($data.status)"
+$subject = "Autotask: $($data.jobNumber) - $($data.status)"
 $body = @"
 <html>
 <body style="font-family: Segoe UI, Arial, sans-serif; color: #333;">
@@ -78,7 +78,7 @@ $body = @"
 
 #### daily-report
 
-Subject: `Ratatosk Daily Report - {date}`
+Subject: `Autotask Daily Report - {date}`
 
 ```powershell
 $workerRows = $data.workers | ForEach-Object {
@@ -92,11 +92,11 @@ $workerRows = $data.workers | ForEach-Object {
     </tr>"
 }
 
-$subject = "Ratatosk Daily Report - $($data.date)"
+$subject = "Autotask Daily Report - $($data.date)"
 $body = @"
 <html>
 <body style="font-family: Segoe UI, Arial, sans-serif; color: #333;">
-<h2>Ratatosk Daily Report - $($data.date)</h2>
+<h2>Autotask Daily Report - $($data.date)</h2>
 <p><strong>Completed:</strong> $($data.totalCompleted) | <strong>Failed:</strong> $($data.totalFailed) | <strong>Queued:</strong> $($data.totalQueued)</p>
 <table style="border-collapse: collapse; width: 100%;">
   <thead>
@@ -120,10 +120,10 @@ $body = @"
 
 #### failed-alert
 
-Subject: `[ALERT] Ratatosk Task Failed: {jobNumber}`
+Subject: `[ALERT] Autotask Task Failed: {jobNumber}`
 
 ```powershell
-$subject = "[ALERT] Ratatosk Task Failed: $($data.jobNumber)"
+$subject = "[ALERT] Autotask Task Failed: $($data.jobNumber)"
 $body = @"
 <html>
 <body style="font-family: Segoe UI, Arial, sans-serif; color: #333;">

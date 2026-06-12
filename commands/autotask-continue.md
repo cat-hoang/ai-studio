@@ -1,8 +1,8 @@
----
-description: "Resume a paused or continuing Ratatosk task and record that work is continuing"
+﻿---
+description: "Resume a paused or continuing Autotask task and record that work is continuing"
 ---
 
-# Ratatosk Continue
+# Autotask Continue
 
 Resume a paused task so work can continue from where it left off.
 
@@ -16,7 +16,7 @@ Resume a paused task so work can continue from where it left off.
 Extract `$issueId` and `--elapsed <time>` from the invocation.
 If `$issueId` is missing, stop and print usage:
 ```
-Usage: /ratatosk-continue <issue-id> [--elapsed 2h:50m]
+Usage: /autotask-continue <issue-id> [--elapsed 2h:50m]
 ```
 
 ## Step 2: Read State
@@ -50,7 +50,7 @@ Write the updated `temp/state.json`.
 
 Run:
 ```
-tools\set-ratatosk-worker-activity.ps1 -IssueId <issueId> -ActivityStatus "implementing" -Description "Continuing task"
+tools\set-autotask-worker-activity.ps1 -IssueId <issueId> -ActivityStatus "implementing" -Description "Continuing task"
 ```
 If the script fails with "Worker not found", ignore the error and continue.
 
@@ -61,6 +61,6 @@ Print:
 ✓ Issue <issueId> is now marked as continuing.
   Elapsed so far: <elapsed>
   
-Resume working. Use /ratatosk-wrapup when done.
+Resume working. Use /autotask-wrapup when done.
 ```
 

@@ -1,9 +1,9 @@
-<#
+﻿<#
 .SYNOPSIS
-Returns a structured Ratatosk readiness and health snapshot.
+Returns a structured Autotask readiness and health snapshot.
 
 .DESCRIPTION
-Reads merged Ratatosk configuration and current state to report whether the
+Reads merged Autotask configuration and current state to report whether the
 local environment is ready, degraded, or blocked. The script is designed as a
 shared primitive for preflight, wrapup, and dashboard health surfacing.
 
@@ -12,7 +12,7 @@ PSCustomObject. Includes status, configuration, tool availability, notification
 configuration, state-derived warnings, and any blocking reasons.
 
 .EXAMPLE
-.\tools\get-ratatosk-system-health.ps1 | ConvertTo-Json -Depth 10
+.\tools\get-autotask-system-health.ps1 | ConvertTo-Json -Depth 10
 #>
 [CmdletBinding()]
 param()
@@ -20,13 +20,13 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-. (Join-Path $PSScriptRoot 'ratatosk-state-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-state-common.ps1')
 
 function Get-ConfigContent {
-    $ratatoskRoot = Get-RatatoskRootPath
+    $autotaskRoot = Get-AutotaskRootPath
     $paths = @(
-        (Join-Path $ratatoskRoot 'config.yaml'),
-        (Join-Path $ratatoskRoot 'config.local.yaml')
+        (Join-Path $autotaskRoot 'config.yaml'),
+        (Join-Path $autotaskRoot 'config.local.yaml')
     )
 
     $chunks = foreach ($path in $paths) {
@@ -194,7 +194,7 @@ function Get-RecentTokenError {
 
 function Main {
     $configContent = Get-ConfigContent
-    $state = Read-RatatoskState
+    $state = Read-AutotaskState
     $workers = @(Get-ArrayValue -Value $state.workers)
     $completedJobs = @(Get-ArrayValue -Value $state.completedJobs)
     $failedJobs = @(Get-ArrayValue -Value $state.failedJobs)

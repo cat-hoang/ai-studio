@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
@@ -50,9 +50,9 @@ try {
         exit 0
     }
 
-    . (Join-Path $pluginRoot 'tools\ratatosk-state-common.ps1')
+    . (Join-Path $pluginRoot 'tools\autotask-state-common.ps1')
 
-    $state = Read-RatatoskState
+    $state = Read-AutotaskState
     $job = @(
         $state.workers +
         $state.completedJobs +
@@ -85,17 +85,17 @@ try {
 
     $currentStatus = ([string]$job.status).ToLowerInvariant()
     $instruction = if ($currentStatus -eq 'done') {
-        "Run .\\tools\\finalize-ratatosk-worker.ps1 -IssueId $issueId -Status done -Summary '<final summary>' before stopping."
+        "Run .\\tools\\finalize-autotask-worker.ps1 -IssueId $issueId -Status done -Summary '<final summary>' before stopping."
     } else {
-        "Run .\\tools\\finalize-ratatosk-worker.ps1 -IssueId $issueId -Status failed -Summary '<failure summary>' -ErrorMessage '<error>' before stopping."
+        "Run .\\tools\\finalize-autotask-worker.ps1 -IssueId $issueId -Status failed -Summary '<failure summary>' -ErrorMessage '<error>' before stopping."
     }
 
     Write-HookDecision `
         -Decision 'block' `
-        -Reason "Ratatosk worker $issueId has no final report yet." `
-        -SystemMessage "Before stopping a Ratatosk worker, capture a final report artifact and notifications. $instruction"
+        -Reason "Autotask worker $issueId has no final report yet." `
+        -SystemMessage "Before stopping a Autotask worker, capture a final report artifact and notifications. $instruction"
     exit 0
 } catch {
-    Write-HookDecision -Decision 'approve' -SystemMessage "Ratatosk stop hook failed open: $($_.Exception.Message)"
+    Write-HookDecision -Decision 'approve' -SystemMessage "Autotask stop hook failed open: $($_.Exception.Message)"
     exit 0
 }
