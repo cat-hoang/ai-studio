@@ -63,6 +63,7 @@ notepad config.local.yaml
 
 # 3. Start the dashboard
 npm install
+npm install pm2 -g
 pm2 start dashboard/ecosystem.config.js
 
 # 4. Launch the orchestrator
