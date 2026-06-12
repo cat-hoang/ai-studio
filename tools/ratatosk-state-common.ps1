@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 $script:RatatoskRoot = Split-Path -Parent $PSScriptRoot
 $script:RatatoskStatePath = Join-Path $script:RatatoskRoot 'temp\state.json'
 $script:Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+$script:RatatoskBackupRetentionCount = 50
 
 function Get-RatatoskRootPath {
     return $script:RatatoskRoot
@@ -402,6 +403,26 @@ function Read-RatatoskState {
     return $state
 }
 
+function Invoke-RatatoskBackupRetention {
+    param(
+        [Parameter(Mandatory)]
+        [string]$TempDir,
+
+        [int]$KeepCount = $script:RatatoskBackupRetentionCount
+    )
+
+    if ($KeepCount -lt 1) { return }
+
+    try {
+        $backups = Get-ChildItem -LiteralPath $TempDir -Filter 'state.json.bak.*' -File -ErrorAction Stop |
+            Sort-Object -Property Name -Descending
+        if ($backups.Count -le $KeepCount) { return }
+        $backups | Select-Object -Skip $KeepCount | Remove-Item -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Verbose "Invoke-RatatoskBackupRetention: pruning failed: $_"
+    }
+}
+
 function Write-RatatoskState {
     param(
         [Parameter(Mandatory)]
@@ -419,6 +440,7 @@ function Write-RatatoskState {
             $backupName = "state.json.bak.$ts"
             $backupPath = Join-Path $tempDir $backupName
             Copy-Item -LiteralPath $script:RatatoskStatePath -Destination $backupPath -Force
+            Invoke-RatatoskBackupRetention -TempDir $tempDir
         }
     } catch {
         # Best-effort: do not fail writes if backup fails

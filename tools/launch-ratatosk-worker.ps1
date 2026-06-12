@@ -152,6 +152,18 @@ function New-CopilotTabArguments {
     $escapedPromptFile = $ResolvedPromptFile.Replace("'", "''")
     $escapedPluginDir = $ResolvedPluginDir.Replace("'", "''")
 
+    # Detect the active gh account at launch time so the worker tab uses the same account.
+    # If the wrong account is active, MCP third-party policy checks fail and servers are
+    # skipped, which can also block -i auto-execution.
+    $ghUser = ''
+    try {
+        $ghStatusText = gh auth status 2>&1 | Out-String
+        if ($ghStatusText -match 'Logged in to github\.com account (\S+)[\s\S]*?Active account: true') {
+            $ghUser = $Matches[1]
+        }
+    } catch { <# ignore — we'll skip the switch if detection fails #> }
+    $escapedGhUser = $ghUser.Replace("'", "''")
+
     $commandText = @"
 # Normalise edi credentials from User-level env vars so edi CLI always works
 # regardless of what the parent shell had in its session environment.
@@ -159,9 +171,23 @@ function New-CopilotTabArguments {
 `$glowPass = [System.Environment]::GetEnvironmentVariable('GLOW_PASSWORD', 'User')
 if (`$glowUser) { `$env:GLOW_USERNAME = `$glowUser }
 if (`$glowPass) { `$env:GLOW_PASSWORD = `$glowPass }
-Set-Location -LiteralPath '$escapedWorkspacePath'
+# Ensure correct gh auth account — wrong account disables MCP third-party servers
+if ('$escapedGhUser') { gh auth switch --user '$escapedGhUser' 2>&1 | Out-Null }
+# Pre-trust the workspace folder so Copilot skips the interactive folder trust prompt.
+`$configPath = Join-Path `$env:USERPROFILE '.copilot\config.json'
+if (Test-Path `$configPath) {
+    try {
+        `$cfg = Get-Content `$configPath -Raw | ConvertFrom-Json
+        `$trusted = @(if (`$cfg.trustedFolders) { `$cfg.trustedFolders } else { @() })
+        if ('$escapedWorkspacePath' -notin `$trusted) {
+            `$trusted += '$escapedWorkspacePath'
+            `$cfg.trustedFolders = `$trusted
+            `$cfg | ConvertTo-Json -Depth 10 | Set-Content `$configPath -Encoding UTF8
+        }
+    } catch { }
+}
 `$prompt = Get-Content -LiteralPath '$escapedPromptFile' -Raw -Encoding UTF8
-copilot --plugin-dir '$escapedPluginDir' --allow-all --no-ask-user --add-dir '$escapedPluginDir' --add-dir '$escapedWorkspacePath' -i `$prompt
+copilot -C '$escapedWorkspacePath' --allow-all --no-ask-user --autopilot --max-autopilot-continues 200 --add-dir '$escapedPluginDir' --add-dir '$escapedWorkspacePath' -i `$prompt
 "@
 
     # Prefer pwsh.exe (PS7) via full path; fall back to powershell.exe (PS5.1) if not found

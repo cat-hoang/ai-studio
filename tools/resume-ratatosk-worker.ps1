@@ -5,6 +5,9 @@ param(
 
     [string]$TaskSequence = '',
     [string]$Source = 'manual-resume',
+    # When set, skip all state manipulation and only write the prompt file + launch the
+    # worker tab. Used by the dashboard /api/reopen endpoint which already moved the state.
+    [switch]$LaunchOnly,
     [switch]$PassThru
 )
 
@@ -82,12 +85,14 @@ function New-ResumePromptContent {
         'current workspace branch'
     )
     $finalSummary = [string](Get-ObjectPropertyValue -Object $Worker -Name 'finalReportSummary' -Default '')
+    $elapsedMsOffset = [double](Get-ObjectPropertyValue -Object $Worker -Name 'elapsedMsOffset' -Default 0)
 
     @"
 You are Ratatosk Task Worker for $jobNumber ($taskType).
 Read your full instructions from `..\..\agents\task-worker.md`.
 Your workspace is $WorkspaceRelativePath.
 Your job number is $jobNumber, task sequence is $taskSequence, task type is $taskType, zone is $zone.
+Prior elapsed time from previous sessions: ${elapsedMsOffset}ms — pass this as -PriorElapsedMs when appending finished/failed notes to get cumulative total.
 Task description: $description
 Existing PR URLs: $(if ($existingPrUrls.Count -gt 0) { $existingPrUrls -join ', ' } else { '(none)' })
 Preferred repo branches: $branch
@@ -181,6 +186,28 @@ function Main {
     Set-RatatoskProperty -Object $worker -Name 'sources' -Value $sources
     Set-RatatoskProperty -Object $worker -Name 'queuedVia' -Value $sourceText
     Set-RatatoskProperty -Object $worker -Name 'queuedAt' -Value $timestamp
+
+    # Accumulate elapsed time from the completed/failed session before clearing the timestamps.
+    # This preserves total working time across multiple Reopen cycles. The gap between completedAt
+    # and the new startedAt is intentionally excluded — it was idle time, not work time.
+    if ($workerBucket -ne 'workers') {
+        $prevStartedAt = [string](Get-ObjectPropertyValue -Object $worker -Name 'startedAt' -Default '')
+        $prevCompletedAt = [string](Get-ObjectPropertyValue -Object $worker -Name 'completedAt' -Default '')
+        if (-not [string]::IsNullOrWhiteSpace($prevStartedAt) -and -not [string]::IsNullOrWhiteSpace($prevCompletedAt)) {
+            try {
+                $prevStart = [datetimeoffset]::Parse($prevStartedAt)
+                $prevEnd   = [datetimeoffset]::Parse($prevCompletedAt)
+                $sessionMs = ($prevEnd - $prevStart).TotalMilliseconds
+                if ($sessionMs -gt 0) {
+                    $existingOffsetMs = [double](Get-ObjectPropertyValue -Object $worker -Name 'elapsedMsOffset' -Default 0)
+                    Set-RatatoskProperty -Object $worker -Name 'elapsedMsOffset' -Value ([math]::Round($existingOffsetMs + $sessionMs))
+                }
+            } catch {
+                # Non-fatal: if timestamps can't be parsed, skip accumulation and continue.
+            }
+        }
+    }
+
     Set-RatatoskProperty -Object $worker -Name 'startedAt' -Value $timestamp
     Set-RatatoskProperty -Object $worker -Name 'completedAt' -Value ''
     Set-RatatoskProperty -Object $worker -Name 'error' -Value ''
@@ -261,6 +288,65 @@ function Main {
     }
 }
 
+# MainLaunchOnly: skips all state manipulation. The dashboard /api/reopen endpoint already
+# moved the job to workers before calling this. We only write the prompt file and launch.
+function MainLaunchOnly {
+    $resolvedJobNumber = $JobNumber.Trim().ToUpperInvariant()
+
+    $state = Read-RatatoskState
+    $worker = @($state.workers | Where-Object { Test-RatatoskJobMatch -Job $_ -JobNumber $resolvedJobNumber -TaskSequence $TaskSequence }) | Select-Object -First 1
+    if (-not $worker) {
+        throw "$resolvedJobNumber was not found in workers (state may not have been updated yet)."
+    }
+
+    $workspacePath = Get-FirstNonEmptyValue -Values @(
+        [string](Get-ObjectPropertyValue -Object $worker -Name 'workspacePath' -Default ''),
+        ('workspaces\' + $resolvedJobNumber)
+    )
+    $resolvedWorkspacePath = Resolve-RatatoskPath -Path $workspacePath
+    if (-not (Test-Path -LiteralPath $resolvedWorkspacePath)) {
+        throw "Workspace path not found for ${resolvedJobNumber}: $resolvedWorkspacePath"
+    }
+
+    $workspaceRelativePath = ConvertTo-RatatoskRelativePath -Path $resolvedWorkspacePath
+    $promptFilePath = Join-Path $resolvedWorkspacePath '.ratatosk-prompt.md'
+    $promptContent = New-ResumePromptContent -Worker $worker -WorkspaceRelativePath $workspaceRelativePath
+    Write-Utf8File -Path $promptFilePath -Content $promptContent
+
+    $taskType = Get-FirstNonEmptyValue -Values @([string](Get-ObjectPropertyValue -Object $worker -Name 'taskType' -Default ''), 'unknown')
+    $zoneRaw = Get-ObjectPropertyValue -Object $worker -Name 'zone' -Default $null
+    $zone = if ($null -ne $zoneRaw -and "$zoneRaw".Trim()) { [int]$zoneRaw } else { 0 }
+
+    $launchResult = & (Join-Path $PSScriptRoot 'launch-ratatosk-worker.ps1') `
+        -Cli 'auto' `
+        -JobNumber $resolvedJobNumber `
+        -TaskType $taskType `
+        -Zone $zone `
+        -WorkspacePath $resolvedWorkspacePath `
+        -PromptFile $promptFilePath `
+        -PluginDir (Get-RatatoskRootPath) `
+        -PassThru
+
+    $result = [PSCustomObject]@{
+        success       = $true
+        jobNumber     = $resolvedJobNumber
+        mode          = 'reopen-launch'
+        workerCli     = if ($launchResult) { [string]$launchResult.Cli } else { 'auto' }
+        workspacePath = $workspaceRelativePath
+        promptFile    = (ConvertTo-RatatoskRelativePath -Path $promptFilePath)
+        launched      = $true
+        message       = "Launched worker tab for $resolvedJobNumber."
+    }
+
+    $json = $result | ConvertTo-Json -Depth 10
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    Write-Output $json
+}
+
 if ($MyInvocation.InvocationName -ne '.') {
-    Main
+    if ($LaunchOnly) {
+        MainLaunchOnly
+    } else {
+        Main
+    }
 }
