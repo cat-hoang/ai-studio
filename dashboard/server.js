@@ -209,6 +209,7 @@ function readRawState() {
 }
 
 function writeState(state) {
+  fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true });
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2), 'utf8');
 }
 

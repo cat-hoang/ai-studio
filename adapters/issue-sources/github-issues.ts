@@ -22,7 +22,7 @@ export const githubIssuesAdapter: IssueSourceAdapter = {
     const { section, staffId } = config;
     const warnings: string[] = [];
 
-    const repo = section['repo'] ?? '';
+    const repo = normalizeRepo(section['repo'] ?? '');
     if (!repo) {
       return {
         warnings: [`${ADAPTER}: repo not configured — set issue_source.github_issues.repo`],
@@ -161,6 +161,12 @@ function ghIssueToIssue(i: GHIssue, staffId: string): Issue {
   };
 }
 
+function normalizeRepo(repo: string): string {
+  // Accept full GitHub URLs: https://github.com/owner/repo or github.com/owner/repo
+  const m = repo.match(/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/);
+  return m ? m[1] : repo;
+}
+
 function githubHeaders(token: string): Record<string, string> {
   return {
     Authorization: `Bearer ${token}`,
@@ -177,7 +183,7 @@ function resolveToken(section: Record<string, string>): string {
 }
 
 function requireRepoAndToken(section: Record<string, string>, issueId: string) {
-  const repo = section['repo'] ?? '';
+  const repo = normalizeRepo(section['repo'] ?? '');
   const token = resolveToken(section);
   if (!repo || !token) {
     throw new Error(`${ADAPTER}: repo or token not configured (issue: ${issueId})`);

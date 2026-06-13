@@ -26,7 +26,8 @@ const registry: Record<string, IssueSourceAdapter> = {
  * Returns null if the name is not registered.
  */
 export function getAdapter(name: string): IssueSourceAdapter | null {
-  return registry[name.toLowerCase()] ?? null;
+  const normalized = name.toLowerCase().replace(/_/g, '-');
+  return registry[normalized] ?? null;
 }
 
 /** Return all registered adapter names. */
