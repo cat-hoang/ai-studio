@@ -141,9 +141,32 @@ function Invoke-GenericAdapter {
             throw "Issue source adapter script not found at: $scriptPath"
         }
 
-        $rawLines = @(& bun $scriptPath 2>$null)
-        if ($LASTEXITCODE -ne 0) {
-            throw "query-issue-source.ts exited with code $LASTEXITCODE"
+        $bunExe = (Get-Command bun -ErrorAction SilentlyContinue)?.Source
+        if (-not $bunExe) {
+            $bunExe = Join-Path $env:USERPROFILE '.bun\bin\bun.exe'
+        }
+        if (-not (Test-Path -LiteralPath $bunExe)) {
+            throw "bun executable not found. Ensure bun is installed and available in PATH."
+        }
+        $stderrFile = Join-Path ([System.IO.Path]::GetTempPath()) "query-issue-source-stderr-$PID.txt"
+        $rawLines = @(& $bunExe $scriptPath 2>$stderrFile)
+        $exitCode = $LASTEXITCODE
+        $stderrText = ''
+        if (Test-Path $stderrFile) {
+            $raw = Get-Content $stderrFile -Raw
+            if ($raw) { $stderrText = $raw.Trim() }
+            Remove-Item $stderrFile -Force -ErrorAction SilentlyContinue
+        }
+        if ($exitCode -ne 0) {
+            # Try to extract the error message from the JSON payload written to stdout
+            $jsonError = ''
+            $stdoutJson = $rawLines -join "`n"
+            try {
+                $parsed = $stdoutJson | ConvertFrom-Json -ErrorAction Stop
+                if ($parsed.error) { $jsonError = $parsed.error }
+            } catch {}
+            $detail = if ($jsonError) { $jsonError } elseif ($stderrText) { $stderrText } else { "exit code $exitCode" }
+            throw "query-issue-source.ts failed: $detail"
         }
 
         # The script may emit log lines before the JSON — find the first
