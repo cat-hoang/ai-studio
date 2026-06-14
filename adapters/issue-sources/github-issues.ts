@@ -80,11 +80,7 @@ export const githubIssuesAdapter: IssueSourceAdapter = {
     const { repo, token } = requireRepoAndToken(section, issueId);
     const num = parseNumber(issueId);
 
-    const res = await fetch(`${GITHUB_API}/repos/${repo}/issues/${num}/labels`, {
-      method: 'POST',
-      headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ labels: ['in-progress'] }),
-    });
+    const res = await setStatusLabel(repo, num, token, 'in-progress');
 
     if (!res.ok) {
       throw new Error(`${ADAPTER}: claim failed for ${issueId} — HTTP ${res.status}`);
@@ -114,11 +110,7 @@ export const githubIssuesAdapter: IssueSourceAdapter = {
 
     const label = STATUS_LABEL_MAP[status] ?? status;
 
-    const res = await fetch(`${GITHUB_API}/repos/${repo}/issues/${num}/labels`, {
-      method: 'POST',
-      headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ labels: [label] }),
-    });
+    const res = await setStatusLabel(repo, num, token, label);
 
     if (!res.ok) {
       throw new Error(`${ADAPTER}: updateStatus failed for ${issueId} — HTTP ${res.status}`);
@@ -165,6 +157,40 @@ function normalizeRepo(repo: string): string {
   // Accept full GitHub URLs: https://github.com/owner/repo or github.com/owner/repo
   const m = repo.match(/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/);
   return m ? m[1] : repo;
+}
+
+/**
+ * Apply a single status label, removing any other status labels this adapter
+ * manages. GitHub's labels endpoint is additive (POST appends), so without this
+ * an issue would accumulate every status it has ever held (in-progress +
+ * in-review + done) and never reflect one unambiguous state.
+ */
+async function setStatusLabel(
+  repo: string,
+  num: string,
+  token: string,
+  newLabel: string,
+): Promise<Response> {
+  const res = await fetch(`${GITHUB_API}/repos/${repo}/issues/${num}/labels`, {
+    method: 'POST',
+    headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ labels: [newLabel] }),
+  });
+
+  if (res.ok) {
+    const stale = MANAGED_STATUS_LABELS.filter(l => l !== newLabel);
+    await Promise.all(stale.map(label => removeLabel(repo, num, token, label)));
+  }
+
+  return res;
+}
+
+/** Remove one label from an issue. A 404 (label not applied) is treated as a no-op. */
+async function removeLabel(repo: string, num: string, token: string, label: string): Promise<void> {
+  await fetch(`${GITHUB_API}/repos/${repo}/issues/${num}/labels/${encodeURIComponent(label)}`, {
+    method: 'DELETE',
+    headers: githubHeaders(token),
+  }).catch(() => undefined);
 }
 
 function githubHeaders(token: string): Record<string, string> {
@@ -220,6 +246,9 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   'in-review': 'in-review',
   done: 'done',
 };
+
+/** Every status label this adapter owns — used to clear stale labels on transition. */
+const MANAGED_STATUS_LABELS: string[] = Array.from(new Set(Object.values(STATUS_LABEL_MAP)));
 
 function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
