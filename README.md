@@ -8,7 +8,7 @@ Autotask fetches open issues from GitHub Issues, spins up isolated AI workers in
 
 - **Hands-off, not eyes-off.** Workers run autonomously through the full lifecycle — workspace setup, build, code, test, PR — while you monitor progress from the Kanban dashboard, Teams, or your inbox.
 - **Multi-channel command & control.** Issue commands from the dashboard UI, email, or Teams direct chat. Get notified the same way. No CLI session required.
-- **Hybrid AI economics.** Route orchestration to cost-effective models (GitHub Copilot / GPT-5 mini) and reserve full-reasoning models (Claude Code) for complex coding phases. Or run everything on one platform — your choice.
+- **Hybrid AI economics.** Route orchestration to cost-effective models (GitHub Copilot) and reserve full-reasoning models (Claude Code) for complex coding phases. Or run everything on one platform — your choice.
 - **Safe by design.** Hard-coded guardrails prevent workers from closing tasks (humans do that), force-pushing, or corrupting shared state. Hook-based enforcement, not trust-based.
 - **Workspace isolation.** Each work item gets its own directory, branch, and build context. No cross-job contamination. Workspaces persist for inspection and reuse.
 - **GitHub-native issue intake.** Pull startable issues straight from GitHub Issues with a label/assignee filter — no extra tracker setup.
@@ -80,6 +80,7 @@ pm2 start dashboard/ecosystem.config.js
 | `/autotask-queue` | Add a task to the waiting queue |
 | `/autotask-continue` | Resume a completed or suspended task |
 | `/autotask-wrapup` | End-of-day: verify PRs, save context, cleanup, summary |
+| `/studio-start` | Launch a multi-agent studio team for a work item |
 
 All commands are also available from the dashboard command bar, email, and Teams chat. See the [User Guide](docs/user-guide.md) for the full command reference.
 
@@ -89,6 +90,7 @@ All commands are also available from the dashboard command bar, email, and Teams
 |-------|-------------|
 | [User Guide](docs/user-guide.md) | Daily workflow, configuration reference, autonomy modes |
 | [Architecture Overview](docs/architecture-overview.md) | System components, worker lifecycle, data flows |
+| [Studio Design](docs/studio-design.md) | Multi-agent studio pipeline — agents, phases, configuration |
 | [Teams Integration](docs/teams-guide.md) | Direct chat commands and notification setup |
 | [Email Integration](docs/email-guide.md) | Email commands, polling, and notification templates |
 | [Notifications](docs/notifications.md) | Event types, content fields, delivery channels |
@@ -97,4 +99,4 @@ All commands are also available from the dashboard command bar, email, and Teams
 
 ## License
 
-Internal use only. Copyright WiseTech Global.
+Internal use only.
