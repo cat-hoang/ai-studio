@@ -1,7 +1,7 @@
 ﻿/**
  * Shared types for the Autotask issue-source adapter layer.
  *
- * All adapters (GitHub Issues, Linear, Jira, file) produce Issues
+ * The GitHub Issues adapter produces Issues
  * in this canonical shape — the same shape that get-autotask-startable-jobs.ps1
  * and the dashboard consume.
  */

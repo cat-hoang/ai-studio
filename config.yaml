@@ -4,12 +4,11 @@ branch_prefix: ""  # Branch naming prefix (e.g., ABC). Defaults to staff_code if
 dashboard_port: 3210
 
 # ---------------------------------------------------------------------------
-# Issue source adapter (Phase 1: studio mode)
-# Set adapter to switch away from the built-in ediprod/PAVE path.
-# Available: github-issues | linear | jira | file | ediprod (default: empty = legacy ediprod)
+# Issue source adapter
+# Only GitHub Issues is supported.
 # ---------------------------------------------------------------------------
 issue_source:
-  adapter: "github_issues"                     # set to github-issues, linear, jira, or file to enable studio mode
+  adapter: "github_issues"
   polling_interval_ms: 60000
   # GitHub Issues — used when adapter = github-issues
   github_issues:
@@ -18,26 +17,6 @@ issue_source:
     assignee: me                  # "me" or a specific GitHub username
     token_env: GITHUB_TOKEN       # env var name holding the PAT
     per_page: "50"
-  # Linear — used when adapter = linear
-  linear:
-    team_key: ""                  # Linear team key e.g. ENG
-    state: Todo                   # state name to filter by
-    assignee: me                  # "me" or a specific email/user id
-    api_key_env: LINEAR_API_KEY   # env var name for the Linear API key
-    per_page: "50"
-  # Jira — used when adapter = jira
-  jira:
-    base_url: ""                  # e.g. https://yourorg.atlassian.net
-    project_key: ""               # e.g. ENG
-    status: "To Do"               # JQL status filter
-    assignee: currentUser()       # JQL assignee clause
-    jql: ""                       # optional full JQL override (ignores project/status/assignee above)
-    token_env: JIRA_TOKEN         # env var for Atlassian API token
-    email_env: JIRA_EMAIL         # env var for account email (used for basic auth)
-    per_page: "50"
-  # File — used when adapter = file  (useful for testing / custom pipelines)
-  file:
-    path: issues.json             # path relative to autotask root, or absolute
 
 # ---------------------------------------------------------------------------
 # Studio mode (Phase 2 — agent team pipeline, coming soon)

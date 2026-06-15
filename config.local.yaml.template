@@ -7,37 +7,17 @@ workspace_root: ""                             # Absolute path to your workspace
 artifacts_cache: ""                            # Absolute path to build artifact cache directory
 
 # ---------------------------------------------------------------------------
-# Issue source adapter — pick ONE and fill in its section
-# Set adapter to: github-issues | linear | jira | file
-# Leave blank to fall back to file-based issues
+# Issue source adapter — only GitHub Issues is supported
 # ---------------------------------------------------------------------------
 issue_source:
-  adapter: ""
+  adapter: "github-issues"
 
   # --- GitHub Issues ---
-  # github_issues:
-  #   repo: your-org/your-repo
-  #   labels: ready-for-dev
-  #   assignee: me
-  #   token_env: GITHUB_TOKEN
-
-  # --- Linear ---
-  # linear:
-  #   team_key: ENG
-  #   state: Todo
-  #   api_key_env: LINEAR_API_KEY
-
-  # --- Jira ---
-  # jira:
-  #   base_url: https://yourorg.atlassian.net
-  #   project_key: ENG
-  #   status: "To Do"
-  #   token_env: JIRA_TOKEN
-  #   email_env: JIRA_EMAIL
-
-  # --- File (offline / testing) ---
-  # file:
-  #   path: issues.json
+  github_issues:
+    repo: your-org/your-repo
+    labels: ready-for-dev
+    assignee: me
+    token_env: GITHUB_TOKEN
 
 # ---------------------------------------------------------------------------
 # Generic repo groups (studio mode — leave empty for legacy WTG mode)

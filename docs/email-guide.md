@@ -92,8 +92,8 @@ Current structured email commands are:
 | `cleanup <WI> [--task <seq>]` | Remove the job from Autotask state and keep the workspace |
 | `reply <WI> <message>` | Answer a worker waiting for input |
 | `answer <WI> <message>` | Alias for `reply` |
-| `notes <WI> --task <seq>` | Read ediProd task notes; reply contains the current notes |
-| `setnotes <WI> --task <seq> <content>` | Overwrite ediProd task notes (multi-line content supported) |
+| `notes <WI> --task <seq>` | Read task notes; reply contains the current notes |
+| `setnotes <WI> --task <seq> <content>` | Overwrite task notes (multi-line content supported) |
 
 ### Not supported by email command intake
 
