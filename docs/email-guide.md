@@ -17,8 +17,8 @@ Configure your local mail settings in `config.local.yaml`:
 
 ~~~yaml
 smtp_server: "smtp.office365.com"
-smtp_from: "your.email@wisetechglobal.com"
-smtp_to: "your.email@wisetechglobal.com"
+smtp_from: "your.email@example.com"
+smtp_to: "your.email@example.com"
 ~~~
 
 ### Mail polling

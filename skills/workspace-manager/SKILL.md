@@ -12,7 +12,7 @@ Read settings from:
 
 Relevant config keys:
 - `workspace_root` -- directory where all workspaces live (e.g., `.\workspaces`)
-- `git_source_root` -- local path to source repos for cloning (e.g., `..\Git\GitHub\WiseTechGlobal`)
+- `git_source_root` -- local path to source repos for cloning (e.g., `..\dev\repos`)
 - `product_repo_mapping` -- mapping of product name to list of repos to clone (e.g., `Forwarding: [CargoWise, Glow, Glow.CargoWiseOne]`)
 - `state_file` -- path to temp/state.json (default: `temp/state.json`)
 
