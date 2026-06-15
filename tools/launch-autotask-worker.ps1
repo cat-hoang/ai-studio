@@ -165,12 +165,6 @@ function New-CopilotTabArguments {
     $escapedGhUser = $ghUser.Replace("'", "''")
 
     $commandText = @"
-# Normalise edi credentials from User-level env vars so edi CLI always works
-# regardless of what the parent shell had in its session environment.
-`$glowUser = [System.Environment]::GetEnvironmentVariable('GLOW_USERNAME', 'User')
-`$glowPass = [System.Environment]::GetEnvironmentVariable('GLOW_PASSWORD', 'User')
-if (`$glowUser) { `$env:GLOW_USERNAME = `$glowUser }
-if (`$glowPass) { `$env:GLOW_PASSWORD = `$glowPass }
 # Ensure correct gh auth account — wrong account disables MCP third-party servers
 if ('$escapedGhUser') { gh auth switch --user '$escapedGhUser' 2>&1 | Out-Null }
 # Pre-trust the workspace folder so Copilot skips the interactive folder trust prompt.

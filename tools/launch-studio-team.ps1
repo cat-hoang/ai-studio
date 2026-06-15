@@ -294,10 +294,6 @@ function New-CopilotTabArguments {
     $escapedPluginDir     = $ResolvedPluginDir.Replace("'", "''")
 
     $commandText = @"
-`$glowUser = [System.Environment]::GetEnvironmentVariable('GLOW_USERNAME', 'User')
-`$glowPass = [System.Environment]::GetEnvironmentVariable('GLOW_PASSWORD', 'User')
-if (`$glowUser) { `$env:GLOW_USERNAME = `$glowUser }
-if (`$glowPass) { `$env:GLOW_PASSWORD = `$glowPass }
 Set-Location -LiteralPath '$escapedWorkspacePath'
 `$prompt = Get-Content -LiteralPath '$escapedPromptFile' -Raw -Encoding UTF8
 copilot --plugin-dir '$escapedPluginDir' --allow-all --no-ask-user --add-dir '$escapedPluginDir' --add-dir '$escapedWorkspacePath' -i `$prompt

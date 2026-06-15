@@ -9,7 +9,7 @@ $autotaskRoot = Split-Path -Parent $PSScriptRoot
 $statePath = Join-Path $autotaskRoot 'temp\state.json'
 
 . (Join-Path $PSScriptRoot 'graph-mail-common.ps1')
-. (Join-Path $PSScriptRoot 'autotask-ediprod-link-common.ps1')
+. (Join-Path $PSScriptRoot 'autotask-link-common.ps1')
 
 function Get-ConfigContent {
     $autotaskRoot = Split-Path -Parent $PSScriptRoot
@@ -364,7 +364,7 @@ function Send-CommandReplyEmail {
         )
 
         $safeJobNumber = ConvertTo-HtmlText $JobNumber
-        $jobLink = Get-EdiProdWebLink -JobNumber $JobNumber -JobGuid $JobGuid -StatePath $statePath
+        $jobLink = Get-IssueWebLink -JobNumber $JobNumber -StatePath $statePath
         if ([string]::IsNullOrWhiteSpace($jobLink)) {
             return $safeJobNumber
         }

@@ -360,7 +360,7 @@ Current behavior:
 - poll interval defaults to **30 seconds**
 - jobs already tracked in waiting, running, completed, or failed are removed from the visible startable list
 - excluded task types are filtered out
-- tasks with no assigned staff but with a matching capability (from `staff_capabilities`) **are included** — these are unassigned tasks that you are eligible to pick up
+- issues are filtered by the configured label and assignee
 
 Each startable card can show:
 

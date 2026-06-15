@@ -640,13 +640,11 @@ function Write-Utf8File {
     [System.IO.File]::WriteAllText($Path, $Content, $encoding)
 }
 
-# Get-EdiProdTaskType: resolves the task type for a specific task sequence.
-# Called when starting a job with --task <seq> but no explicit task type, so the terminal
-# tab caption shows "WI# DEV" instead of "WI# unknown".
-# Strategy 1: query the dashboard's in-memory startable-jobs cache (fast, no auth required).
-# Strategy 2: call `edi task list` to look up the task type directly.
+# Get-TaskTypeForSequence: resolves the task type for a specific task sequence
+# from the dashboard's in-memory startable-jobs cache, so the terminal tab caption
+# shows "WI# DEV" instead of "WI# unknown".
 # Returns empty string on any failure — worker start is never blocked.
-function Get-EdiProdTaskType {
+function Get-TaskTypeForSequence {
     param(
         [Parameter(Mandatory)]
         [string]$JobNumber,
@@ -658,8 +656,8 @@ function Get-EdiProdTaskType {
         [string]$AutotaskRoot
     )
 
-    # Strategy 1: ask the local dashboard server for the startable-jobs cache.
-    # The dashboard already has task types from the buffer board poller.
+    # Ask the local dashboard server for the startable-jobs cache, which already
+    # has task types from the startable poller (the issue-source adapter).
     try {
         $configContent = Get-ConfigContent -Path @(
             (Join-Path $AutotaskRoot 'config.yaml'),
@@ -690,34 +688,7 @@ function Get-EdiProdTaskType {
             }
         }
     } catch {
-        # Dashboard not running or unreachable — fall through to next strategy
-    }
-
-    # Strategy 2: call edi CLI to resolve the task type for this job and sequence number.
-    # This is opportunistic — if edi is unavailable or the task isn't found, return empty.
-    try {
-        $ediOutput = & edi task list $JobNumber --format jsonl 2>$null | Out-String
-        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($ediOutput.Trim())) {
-            foreach ($line in ($ediOutput -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
-                $task = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
-                if ($null -eq $task) { continue }
-                if ([string]$task.sequence -eq $TaskSequence) {
-                    # type may be a nested object {code, description} or a plain string
-                    $typeCode = if ($task.type -is [string]) {
-                        $task.type
-                    } elseif ($null -ne $task.type -and -not [string]::IsNullOrWhiteSpace([string]$task.type.code)) {
-                        [string]$task.type.code
-                    } else {
-                        ''
-                    }
-                    if (-not [string]::IsNullOrWhiteSpace($typeCode)) {
-                        return $typeCode.Trim().ToUpper()
-                    }
-                }
-            }
-        }
-    } catch {
-        # Best-effort — do not fail worker start if edi lookup fails
+        # Dashboard not running or unreachable
     }
 
     return ''
@@ -905,7 +876,7 @@ function Main {
         ''
     }
 
-    # Enrich summary/description from ediProd when they are missing or just the job number
+    # Enrich summary/description from the issue source when they are missing or just the job number
     $currentSummary = [string](Get-ObjectPropertyValue -Object $job -Name 'summary' -Default '')
     $currentDesc = [string](Get-ObjectPropertyValue -Object $job -Name 'description' -Default '')
     $needsEnrichment = (
@@ -959,10 +930,10 @@ function Main {
     $taskType = Get-FirstNonEmptyValue -Values @([string](Get-ObjectPropertyValue -Object $job -Name 'taskType' -Default ''), 'unknown')
     $taskSequence = [string](Get-ObjectPropertyValue -Object $job -Name 'taskSequence' -Default '')
 
-    # If taskType is still unknown but we have a task sequence, look it up from ediProd
-    # so the terminal tab shows "WI# DEV" instead of "WI# unknown".
+    # If taskType is still unknown but we have a task sequence, look it up from the
+    # startable cache so the terminal tab shows "WI# DEV" instead of "WI# unknown".
     if ($taskType -eq 'unknown' -and -not [string]::IsNullOrWhiteSpace($taskSequence)) {
-        $fetchedTaskType = Get-EdiProdTaskType -JobNumber $resolvedJobNumber -TaskSequence $taskSequence -AutotaskRoot $autotaskRoot
+        $fetchedTaskType = Get-TaskTypeForSequence -JobNumber $resolvedJobNumber -TaskSequence $taskSequence -AutotaskRoot $autotaskRoot
         if (-not [string]::IsNullOrWhiteSpace($fetchedTaskType)) {
             $taskType = $fetchedTaskType
             Set-AutotaskProperty -Object $job -Name 'taskType' -Value $taskType
@@ -978,22 +949,6 @@ function Main {
         }
     }
     $jobGuid = [string](Get-ObjectPropertyValue -Object $job -Name 'jobGuid' -Default '')
-    # Enrich GUID from edi CLI when not already known (e.g. manually-started jobs)
-    if ([string]::IsNullOrWhiteSpace($jobGuid)) {
-        try {
-            $ediCmd = Get-Command 'edi' -ErrorAction SilentlyContinue
-            if ($null -ne $ediCmd) {
-                $wiJson = & edi workitem get $resolvedJobNumber --format json 2>$null | Out-String
-                if (-not [string]::IsNullOrWhiteSpace($wiJson)) {
-                    $wiObj = $wiJson | ConvertFrom-Json -ErrorAction Stop
-                    foreach ($doc in @($wiObj.attachedDocuments)) {
-                        $m = [regex]::Match([string]$doc.url, 'ediprod:///I(?:WorkItem|SupportIncident|Project)/([0-9a-fA-F\-]{36})/')
-                        if ($m.Success) { $jobGuid = $m.Groups[1].Value; break }
-                    }
-                }
-            }
-        } catch { }
-    }
     $source = Get-FirstNonEmptyValue -Values @([string](Get-ObjectPropertyValue -Object $job -Name 'source' -Default ''), 'dashboard-command')
     $sources = @((Get-ObjectPropertyValue -Object $job -Name 'sources' -Default @()))
     if ($sources.Count -eq 0) {
@@ -1012,7 +967,7 @@ Read your full instructions from ``$agentsDir\task-worker.md``.
 Your workspace is $workspaceRelativePath.
 Autotask root is $autotaskRoot.
 Your job number is $resolvedJobNumber, task sequence is $taskSequence, task type is $taskType, zone is $zone, staff code is $staffCode.
-Task started at: $startedAtLocal (local time) — use this exact string when appending the [${staffCode}] Started: note to ediProd task notes, do NOT call Get-Date for the start time.
+Task started at: $startedAtLocal (local time) — use this exact string when posting the [${staffCode}] Started: note as a GitHub issue comment, do NOT call Get-Date for the start time.
 Task description: $description
 Workspace mode: $workspaceMode$(if ($workspaceMode -eq 'reference') { " - repos are read-only references in git_source_root; see .autotask\repo-paths.json for paths. Do NOT clone repos. If you discover code changes are needed, request user input before proceeding." } else { " - clone each repo from git_source_root during Phase 1 workspace setup." })
 Git source root: $gitSourceRootPath

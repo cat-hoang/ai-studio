@@ -25,11 +25,11 @@ function Get-YamlValue($content, $key) {
 $smtpFrom = Get-YamlValue $configContent 'smtp_from'
 $smtpTo   = Get-YamlValue $configContent 'smtp_to'
 $statePath = Join-Path $autotaskRoot 'temp\state.json'
-$linkCommonPath = Join-Path $PSScriptRoot 'autotask-ediprod-link-common.ps1'
+$linkCommonPath = Join-Path $PSScriptRoot 'autotask-link-common.ps1'
 
 if ([string]::IsNullOrWhiteSpace($smtpFrom)) { throw 'smtp_from is empty' }
 if ([string]::IsNullOrWhiteSpace($smtpTo))   { throw 'smtp_to is empty' }
-if (-not (Test-Path -LiteralPath $linkCommonPath)) { throw "Shared ediProd link helper not found: $linkCommonPath" }
+if (-not (Test-Path -LiteralPath $linkCommonPath)) { throw "Shared link helper not found: $linkCommonPath" }
 . $linkCommonPath
 
 # --- OAuth2 token management via browser auth + Graph API ---
@@ -146,7 +146,7 @@ switch ($templateName) {
         $body = '<html><body style="font-family:Segoe UI,Arial,sans-serif;color:#333;">' +
             "<h2>Task Summary: $($tplData.jobNumber)</h2>" +
             '<table style="border-collapse:collapse;width:100%;max-width:600px;">' +
-            "<tr><td style='padding:6px;font-weight:bold;'>Job</td><td style='padding:6px;'>$(Get-EdiProdLinkHtml -JobNumber $tplData.jobNumber -JobGuid $tplData.jobGuid -StatePath $statePath)$(if (-not [string]::IsNullOrWhiteSpace($jobTitle)) { ' · ' + [System.Net.WebUtility]::HtmlEncode($jobTitle) })</td></tr>" +
+            "<tr><td style='padding:6px;font-weight:bold;'>Job</td><td style='padding:6px;'>$(Get-IssueLinkHtml -JobNumber $tplData.jobNumber -StatePath $statePath)$(if (-not [string]::IsNullOrWhiteSpace($jobTitle)) { ' · ' + [System.Net.WebUtility]::HtmlEncode($jobTitle) })</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Type</td><td style='padding:6px;'>$($tplData.taskType)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Task Sequence</td><td style='padding:6px;'>$($tplData.taskSequence)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Description</td><td style='padding:6px;'>$($tplData.description)</td></tr>" +
@@ -163,7 +163,7 @@ switch ($templateName) {
             '<div style="background-color:#dff6dd;border-left:4px solid #107c10;padding:12px;margin-bottom:16px;">' +
             '<h2 style="color:#107c10;margin-top:0;">Task Started</h2></div>' +
             '<table style="border-collapse:collapse;width:100%;max-width:600px;">' +
-            "<tr><td style='padding:6px;font-weight:bold;'>Job</td><td style='padding:6px;'>$(Get-EdiProdLinkHtml -JobNumber $tplData.jobNumber -JobGuid $tplData.jobGuid -StatePath $statePath) · $([System.Net.WebUtility]::HtmlEncode($jobTitle))</td></tr>" +
+            "<tr><td style='padding:6px;font-weight:bold;'>Job</td><td style='padding:6px;'>$(Get-IssueLinkHtml -JobNumber $tplData.jobNumber -StatePath $statePath) · $([System.Net.WebUtility]::HtmlEncode($jobTitle))</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Type</td><td style='padding:6px;'>$($tplData.taskType)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Task Sequence</td><td style='padding:6px;'>$($tplData.taskSequence)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Description</td><td style='padding:6px;'>$($tplData.description)</td></tr>" +
@@ -203,7 +203,7 @@ switch ($templateName) {
             '<div style="background-color:#fde7e9;border-left:4px solid #d13438;padding:12px;margin-bottom:16px;">' +
             '<h2 style="color:#d13438;margin-top:0;">Task Failed</h2></div>' +
             '<table style="border-collapse:collapse;width:100%;max-width:600px;">' +
-            "<tr><td style='padding:6px;font-weight:bold;'>Job Number</td><td style='padding:6px;'>$(Get-EdiProdLinkHtml -JobNumber $tplData.jobNumber -JobGuid $tplData.jobGuid -StatePath $statePath)</td></tr>" +
+            "<tr><td style='padding:6px;font-weight:bold;'>Job Number</td><td style='padding:6px;'>$(Get-IssueLinkHtml -JobNumber $tplData.jobNumber -StatePath $statePath)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Task Sequence</td><td style='padding:6px;'>$($tplData.taskSequence)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Type</td><td style='padding:6px;'>$($tplData.taskType)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Zone</td><td style='padding:6px;'>$($tplData.zone)</td></tr>" +
@@ -223,7 +223,7 @@ switch ($templateName) {
             '<div style="background-color:#fff4ce;border-left:4px solid #ffb900;padding:12px;margin-bottom:16px;">' +
             '<h2 style="margin-top:0;">Autotask needs your input</h2></div>' +
             '<table style="border-collapse:collapse;width:100%;max-width:700px;">' +
-            "<tr><td style='padding:6px;font-weight:bold;'>Job Number</td><td style='padding:6px;'>$(Get-EdiProdLinkHtml -JobNumber $tplData.jobNumber -JobGuid $tplData.jobGuid)</td></tr>" +
+            "<tr><td style='padding:6px;font-weight:bold;'>Job Number</td><td style='padding:6px;'>$(Get-IssueLinkHtml -JobNumber $tplData.jobNumber -StatePath $statePath)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Task Sequence</td><td style='padding:6px;'>$($tplData.taskSequence)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Type</td><td style='padding:6px;'>$($tplData.taskType)</td></tr>" +
             "<tr><td style='padding:6px;font-weight:bold;'>Zone</td><td style='padding:6px;'>$($tplData.zone)</td></tr>" +
