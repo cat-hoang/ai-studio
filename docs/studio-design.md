@@ -29,7 +29,7 @@
 
 | Principle | Description |
 |-----------|-------------|
-| **Generic by default** | Works out of the box with GitHub Issues, Linear, Jira, or a plain JSON file. No proprietary system required. |
+| **Generic by default** | Works out of the box with GitHub Issues. No proprietary system required. |
 | **Specialization over generalism** | Each agent has a focused role and focused prompts. The architect does not write tests; the tester does not design architecture. |
 | **Handoff-driven** | Agents communicate through shared **artifacts** (spec docs, code, test reports) stored in the workspace. No shared mutable state between agents. |
 | **Human gates** | The studio pauses at configurable quality gates (after design, after PR creation) for human approval before proceeding. |
@@ -43,13 +43,13 @@
 
 | Removed | Replacement |
 |---------|-------------|
-| `ediProd` task tracking | Generic "issue tracker" plugin interface |
-| `edi task claim/suspend/notes` calls | `issue-tracker` adapter methods: `claim`, `update_status`, `append_note` |
-| BM OData + PAVE API job discovery | `issue-source` adapter: GitHub Issues, Linear, Jira, or file-based |
+| Legacy WTG task tracking | Generic "issue tracker" plugin interface |
+| Legacy task claim/suspend/notes calls | `issue-tracker` adapter methods: `claim`, `update_status`, `append_note` |
+| Legacy WTG job discovery | `issue-source` adapter: GitHub Issues |
 | `Crikey` artifact download | Generic `artifact-cache` adapter (CI system agnostic) |
 | `CargoWise` / WTG repo mapping | User-defined `repo_groups` in config |
 | VPN preflight to `crikey.wtg.zone` | Generic `preflight_checks` list in config |
-| `mcp-ediprod` MCP server | Removed. Replaced by issue tracker adapter calls |
+| Legacy MCP server | Removed. Replaced by issue tracker adapter calls |
 | `staff_code` / `buffer_board_url` | Generic `studio.staff_id` and issue source config |
 
 ### Added (Studio-specific)
@@ -107,9 +107,6 @@ flowchart TD
 
     subgraph IssueSource["Issue Source Adapter"]
         GH[GitHub Issues]
-        LI[Linear]
-        JI[Jira]
-        FILE[File / JSON]
     end
 
     Channels --> CMD
@@ -359,10 +356,6 @@ interface IssueSourceAdapter {
 | Adapter | Source | Notes |
 |---------|--------|-------|
 | `github-issues` | GitHub Issues API | Filter by label, milestone, or project board column |
-| `linear` | Linear GraphQL API | Filter by team, state, priority |
-| `jira` | Jira REST API | Filter by project, sprint, status |
-| `file` | Local JSON file | `issues.json` — for offline testing and demos |
-| `ediprod` (legacy) | ediProd / PAVE | Retained as optional plugin for WTG users |
 
 ### Configuration (per adapter)
 
@@ -431,7 +424,7 @@ studio:
     post_design: true             # pause for human after spec.md
     post_pr: true                 # pause for human before merging
 
-# Issue source (replaces buffer_board_url + edi-specific config)
+# Issue source (replaces legacy WTG job-discovery config)
 issue_source:
   adapter: github-issues
   polling_interval_ms: 60000
@@ -478,7 +471,6 @@ product_repo_mapping
 bin_target_repo
 bin_copy_sources
 db_upgrade
-mcp_ediprod_root
 domain_plugins  # moved to optional plugins section
 staff_capabilities
 excluded_task_types
@@ -509,10 +501,6 @@ Existing commands (`autotask-start`, `autotask-status`, etc.) remain as legacy s
 adapters/
   issue-sources/
     github-issues.ts    ← GitHub Issues adapter
-    linear.ts           ← Linear adapter
-    jira.ts             ← Jira adapter
-    file.ts             ← Local file adapter
-    ediprod.ts          ← Legacy WTG adapter (optional)
     index.ts            ← Adapter loader
 
 agents/
@@ -558,9 +546,8 @@ workspaces/<issue-id>/
 
 | File | Disposition |
 |------|-------------|
-| `tools/ediProd-mcp-server.js` | Move to `adapters/issue-sources/ediprod.ts` (optional plugin) |
-| `hooks/guard-mcp-ediprod-task.ps1` | Retire (ediProd-specific) |
-| `hooks/guard-bash-edi-task.ps1` | Retire (ediProd-specific) |
+| Legacy WTG issue-source scripts | Removed |
+| Legacy WTG worker guard hooks | Removed |
 | `tools/get-autotask-task-notes.ps1` | Generalize into issue tracker adapter |
 | `tools/set-autotask-task-notes.ps1` | Generalize |
 | `skills/crikey-build-artifacts/` | Move to optional `plugins/crikey/` (still usable for WTG) |
@@ -593,7 +580,7 @@ Studio mode is **additive** — the existing single-worker pipeline continues to
 
 ### Phase 4 — WTG cleanup (optional, WTG users only)
 
-1. Move ediProd logic to `adapters/issue-sources/ediprod.ts`
+1. Remove legacy WTG issue-source logic
 2. Retire WTG-specific hooks
 3. Remove deprecated config keys
 

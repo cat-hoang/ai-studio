@@ -20,8 +20,8 @@ If the argument string contains only the issueId, proceed to Step 2. If taskType
 ## Step 2: Look Up Missing Details
 
 If only issueId was provided:
-- Try to find the issue in the configured issue source (GitHub Issues, Linear, Jira, or file).
-- Use `gh issue view {issueId}` for GitHub, or the appropriate adapter API for others.
+- Try to find the issue in GitHub Issues (the configured issue source).
+- Use `gh issue view {issueId}` to fetch it.
 - Extract taskType (infer from labels/type) and description from the response.
 - If the lookup fails, warn the user but continue with taskType and description as "unknown".
 

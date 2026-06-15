@@ -2,15 +2,15 @@
 
 ## VPN or internal connectivity problems
 
-**Symptom:** Autotask cannot reach PAVE, ediprod, Crikey, or other internal services.
+**Symptom:** Autotask cannot reach GitHub, Crikey, or other configured services.
 
 **What to check:**
 
-1. Verify the WTG VPN is connected
+1. Verify network connectivity (and the WTG VPN, if your setup needs it)
 2. Confirm the configured hosts are reachable from your machine
 3. Re-run the action after connectivity is restored
 
-Autotask depends on VPN-backed services for startable polling, ediprod access, and build artifact downloads.
+Autotask depends on GitHub for startable polling and on any configured services for build artifact downloads.
 
 ---
 
@@ -67,7 +67,7 @@ Typical causes:
 
 - **Mail Poller**: Graph auth expired, SMTP config wrong, mail folder wrong
 - **Teams Poller**: Teams chat auth expired, `teams_chat_target_*` config wrong, command polling disabled, direct chat target not found
-- **Startable Poller**: VPN down, `buffer_board_url` wrong, PAVE unavailable, board/staff config wrong
+- **Startable Poller**: GitHub token missing/expired, `issue_source.github_issues.repo` or label/assignee filter wrong, network down
 
 ---
 
@@ -75,23 +75,21 @@ Typical causes:
 
 **Symptom:** You expected startable work, but the dashboard shows none or fewer jobs than expected.
 
-Current startable behavior is stricter than a raw board snapshot. Autotask:
+Current startable behavior is stricter than a raw issue list. Autotask:
 
-1. uses **BM OData** as the primary source; falls back to **PAVE API** when BM OData returns nothing (requires `buffer_board_url` pointing to a running PAVE instance)
-2. filters out hard-excluded task types
-3. filters out capability-only review tasks with no staff code (for example `CBC`, `CBG`, `CR`, `REV`)
+1. fetches open issues from GitHub Issues filtered by the configured label and assignee
+2. excludes pull requests
+3. filters out hard-excluded task types
 4. removes jobs that are already tracked in waiting, running, completed, or failed
 5. may hide never-auto tasks if **Hide Never Auto** is enabled in the UI
 
 **What to check:**
 
-1. Confirm `staff_code`, `board_name`, and `buffer_board_url`
-2. Confirm the task is actually startable in PAVE
-3. Check whether the task is a review task with no staff assignment
+1. Confirm `issue_source.github_issues.repo`, `labels`, and `assignee`
+2. Confirm the GitHub token is set and not expired
+3. Confirm the issue is open and matches the label/assignee filter
 4. Check whether the job is already in one of Autotask's other columns
 5. Toggle **Show Never Auto** if you previously hid those cards
-
-If the Startable Poller shows a warning such as **"PAVE API fallback skipped: PAVE portal not running"**, this is normal when the PAVE buffer board is not running locally. BM OData is the primary source; the PAVE fallback fires only when BM OData returns no results. The warning is informational.
 
 ---
 
@@ -326,23 +324,6 @@ If you are intentionally using webhook-only Teams mode, direct Teams replies sti
 3. If `worker_cli: auto`, confirm Autotask resolved the CLI you expect
 
 For dashboard/email-driven commands, launch failures are often authentication failures underneath.
-
----
-
-## edi CLI returns authentication error
-
-**Symptom:** `edi workitem get` (or any `edi` command) returns `Authentication failed. Please run 'edi login' to re-authenticate.`
-
-**Before escalating to the user:**
-
-The edi CLI stores its token on disk. Auth errors in Autotask workers are almost always caused by **stale shell environment** in a long-running PowerShell session — not an actually expired token.
-
-1. **Do NOT immediately tell the user to run `edi login`.**
-2. Open a fresh PowerShell session (new `powershell` tool call) and retry the exact same command.
-3. If it works in the fresh session → proceed. The old shell was stale.
-4. Only ask the user to run `edi login` if the command fails in multiple fresh sessions.
-
-**Why this happens:** Copilot CLI tool sessions can persist for extended periods. The edi CLI's token cache on disk gets refreshed in the background, but an old shell process may have a diverged environment or cached state that causes a spurious auth failure.
 
 ---
 

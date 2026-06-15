@@ -1361,7 +1361,7 @@ function maybeRunAutoLaunchCycle() {
   const unlaunchedQueued = asArray(dashboardState.waitingQueue)
     .filter(job => !runningKeys.has(getTaskKeyFromJob(job)));
 
-  // New candidates from PAVE that haven't been tracked yet
+  // New candidates from the issue source that haven't been tracked yet
   const newCandidates = asArray(dashboardState.startableJobs).filter(c => !c.neverAutoStart);
 
   if (unlaunchedQueued.length === 0 && newCandidates.length === 0) {

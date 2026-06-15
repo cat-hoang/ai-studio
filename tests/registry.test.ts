@@ -2,12 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { getAdapter, listAdapters } from '../adapters/issue-sources/index.ts';
 
 describe('adapter registry', () => {
-  test('resolves canonical hyphenated names', () => {
+  test('resolves the github-issues adapter', () => {
     expect(getAdapter('github-issues')).not.toBeNull();
-    expect(getAdapter('linear')).not.toBeNull();
-    expect(getAdapter('jira')).not.toBeNull();
-    expect(getAdapter('file')).not.toBeNull();
-    expect(getAdapter('ediprod')).not.toBeNull();
   });
 
   test('normalizes underscores to hyphens (config.yaml uses github_issues)', () => {
@@ -18,13 +14,16 @@ describe('adapter registry', () => {
     expect(getAdapter('GitHub-Issues')).toBe(getAdapter('github-issues')!);
   });
 
-  test('returns null for unknown adapters', () => {
+  test('returns null for unknown and removed adapters', () => {
     expect(getAdapter('bitbucket')).toBeNull();
+    // Only GitHub is supported — these adapters were removed.
+    expect(getAdapter('linear')).toBeNull();
+    expect(getAdapter('jira')).toBeNull();
+    expect(getAdapter('file')).toBeNull();
+    expect(getAdapter('ediprod')).toBeNull();
   });
 
-  test('lists every registered adapter', () => {
-    expect(listAdapters().sort()).toEqual(
-      ['ediprod', 'file', 'github-issues', 'jira', 'linear'].sort(),
-    );
+  test('lists only the github-issues adapter', () => {
+    expect(listAdapters()).toEqual(['github-issues']);
   });
 });
