@@ -859,9 +859,9 @@ let autoLaunchStatus = {
   lastActionAt: '',
   lastJobNumber: '',
 };
-let emailPollStatus = createPollerStatus('email', DEFAULT_EMAIL_POLLING_INTERVAL_MS);
-let teamsCommandPollStatus = createPollerStatus('teams', DEFAULT_TEAMS_CHAT_POLLING_INTERVAL_MS);
-let startablePollStatus = createPollerStatus('startable', DEFAULT_STARTABLE_JOBS_POLLING_INTERVAL_MS);
+const emailPollStatus = createPollerStatus('email', DEFAULT_EMAIL_POLLING_INTERVAL_MS);
+const teamsCommandPollStatus = createPollerStatus('teams', DEFAULT_TEAMS_CHAT_POLLING_INTERVAL_MS);
+const startablePollStatus = createPollerStatus('startable', DEFAULT_STARTABLE_JOBS_POLLING_INTERVAL_MS);
 
 function getTrackedTaskKeys(state) {
   return new Set([
@@ -1105,7 +1105,7 @@ function getTerminalSummary(job) {
     job.activityMessage,
     job.summary,
     job.description,
-    `Worker reached terminal state without running the Autotask finalizer.`
+    'Worker reached terminal state without running the Autotask finalizer.'
   );
 }
 

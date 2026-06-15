@@ -58,7 +58,7 @@ export const ediprodAdapter: IssueSourceAdapter = {
       };
     }
 
-    const items: unknown[] = parsed['results'] ?? parsed['Results'] ?? [];
+    const items = (parsed['results'] ?? parsed['Results'] ?? []) as unknown[];
     const staffCode = section['staff_code'] ?? config.staffId ?? '';
 
     const issues: Issue[] = items
