@@ -34,7 +34,7 @@ Workers are launched in **Windows Terminal tabs** and keep the tab title fixed s
 
 ### Startable poller
 
-The startable poller refreshes the **Startable** column in the dashboard. It uses **BM OData** as its primary source (via a fast TypeScript script) and automatically falls back to the **PAVE API** when BM OData returns nothing. Neither path spends AI requests.
+The startable poller refreshes the **Startable** column in the dashboard. It fetches open issues from the configured issue source (GitHub Issues) via a fast TypeScript script. It does not spend AI requests.
 
 ### Dashboard
 
@@ -58,7 +58,7 @@ Teams can still run in the old notify-only webhook mode, but it can now also use
 - **Git**
 - **Windows Terminal** (`wt.exe`)
 - **Claude Code CLI** and/or **GitHub Copilot CLI**
-- **VPN access** for internal services such as PAVE, ediprod, and Crikey
+- **VPN access** for any internal services your setup requires (e.g. Crikey)
 
 ### First-time setup
 
@@ -207,7 +207,7 @@ The **Commands** card in the dashboard accepts the following syntax. Click **Man
 | `retry <WI> [--task <seq>]` | Retry a failed worker |
 | `cleanup <WI> [--task <seq>]` | Remove the job from Autotask state and keep the workspace on disk |
 | `status [WI] [--task <seq>]` | Show overall status, or a specific job when a job number is supplied |
-| `notes <WI> --task <seq>` | Read ediProd task notes for the specified job/task |
+| `notes <WI> --task <seq>` | Read task notes for the specified job/task |
 | `never-auto <WI> --task <seq>` | Prevent that specific task from being auto-started |
 | `allow-auto <WI> --task <seq>` | Remove the never-auto flag for that task |
 | `help` | Show the supported command list |
@@ -217,7 +217,7 @@ Notes:
 - `never-auto` and `allow-auto` are **per task**, so include `--task <seq>`.
 - `start` bypasses auto-launch guardrails and launches immediately.
 - `cleanup` removes the card from Autotask state but intentionally preserves the workspace folder for manual inspection.
-- `notes` reads ediProd task notes. To edit notes, use the **Notes** button on a startable or waiting card (opens the Notes modal).
+- `notes` reads task notes. To edit notes, use the **Notes** button on a startable or waiting card (opens the Notes modal).
 - Worker-reply commands exist, but they matter only when a worker explicitly opens a user-input request. See the input section or `docs/email-guide.md` if you need that path.
 
 ### Structured command emails
@@ -356,7 +356,7 @@ The Startable column shows startable work discovered by the startable poller.
 
 Current behavior:
 
-- primary source is **BM OData** (`bun tools/query-bm-startable.ts`); automatically falls back to **PAVE API** when BM OData returns nothing
+- fetches open issues from GitHub Issues (`bun tools/query-issue-source.ts`)
 - poll interval defaults to **30 seconds**
 - jobs already tracked in waiting, running, completed, or failed are removed from the visible startable list
 - excluded task types are filtered out
@@ -395,7 +395,7 @@ Common card actions:
 - **Retry** on failed jobs
 - **Jump to Tab** on running jobs
 - **Provide Input** when a worker is waiting for a response
-- **Notes** on startable and waiting cards — opens the ediProd task notes viewer/editor
+- **Notes** on startable and waiting cards — opens the task notes viewer/editor
 - **Cleanup** on completed or failed jobs
 
 Cleanup behavior is intentionally conservative: it removes the task from Autotask state and leaves the workspace on disk.
@@ -425,10 +425,8 @@ These manual launches bypass the automatic guardrails.
 
 The startable poller:
 
-- uses BM OData as the primary source (`bun tools/query-bm-startable.ts`); falls back to **PAVE API** when BM OData returns nothing
-- the BM OData path queries `P9Logs` for SRT events first, expanding the `Parent` task to filter server-side — only tasks that have become startable (SRT log) and are still in ASN status are returned
-- fetches tasks assigned to your staff code **plus** unassigned tasks whose required capability matches any code in `staff_capabilities`
-- capability Guids are resolved once per config-change and cached in `temp/staff-capability-guids.json`; the cache auto-refreshes when `staff_capabilities` codes change
+- fetches open issues from GitHub Issues (`bun tools/query-issue-source.ts`) filtered by the configured label and assignee
+- excludes pull requests and issues already tracked in another column
 - writes its result into Autotask's in-memory startable cache
 - surfaces status and warnings in the dashboard
 - triggers the autonomy evaluator after each successful refresh
@@ -437,8 +435,6 @@ Relevant config:
 
 - `startable_jobs_polling_interval_ms` — refresh interval (default `30000` ms, 30 seconds)
 - `startable_jobs_fetch_timeout_ms` — per-poll timeout
-- `startable_jobs_fallback_on_empty` — if `true`, attempt PAVE API fallback when BM OData returns empty (otherwise the automatic fallback only fires when BM OData itself fails)
-- `staff_capabilities`
 - `excluded_task_types`
 
 ## Notifications and reply loops
@@ -513,7 +509,6 @@ Delete the workspace manually only when you are sure you no longer need logs, ar
 | Setting | Purpose | Current default |
 | ------- | ------- | --------------- |
 | `dashboard_port` | Dashboard port | `3210` |
-| `buffer_board_url` | Base URL used to resolve the board/PAVE source | `http://localhost:6610/` |
 | `crikey_base_url` | Crikey server for shared build artifacts | `https://crikey.wtg.zone` |
 | `email_polling_interval_ms` | Email reply/command polling interval | `30000` |
 | `email_poll_folder_path` | Shared default mail folder | `Inbox/Autotask` |
@@ -522,9 +517,7 @@ Delete the workspace manually only when you are sure you no longer need logs, ar
 | `autonomy_max_workers_per_repo_group` | Soft per repo-family auto-launch cap | `1` |
 | `startable_jobs_polling_interval_ms` | Startable refresh interval | `30000` |
 | `startable_jobs_fetch_timeout_ms` | Per-poll timeout | `120000` |
-| `startable_jobs_fallback_on_empty` | Attempt PAVE API fallback when BM OData returns empty | `false` |
 | `excluded_task_types` | Task types hidden from the startable list | `["SHV", "SH0", "PRV", "MTG", "CHK", "CH0", "CH1", "CH2", "CHG", "CH4"]` |
-| `staff_capabilities` | BM OData capability codes; includes unassigned tasks matching these | `[]` |
 | `model_routing` | Preferred capability tier per phase | `design/code/test/review/triage/default` mapping |
 
 ### Machine-specific overrides (`config.local.yaml`)
@@ -544,9 +537,6 @@ Delete the workspace manually only when you are sure you no longer need logs, ar
 | `email_command_send_replies` | Reply to command emails with success/failure |
 | `email_command_subject_prefix` | Required subject prefix for command emails |
 | `email_command_allowed_senders` | Allowlist for command-email senders |
-| `startable_jobs_fallback_mode` | Local fallback override |
-| `startable_jobs_fallback_on_empty` | Local fallback-on-empty override |
-| `staff_capabilities` | BM OData capability codes for unassigned-task matching |
 | `domain_plugins` | Extra plugin repos and module routing |
 | `ntlm_credentials_path` | Path to NTLM credentials |
 

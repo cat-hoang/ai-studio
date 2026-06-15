@@ -1,9 +1,9 @@
 ﻿/**
  * query-issue-source.ts
  *
- * Bun entry point for the generic issue-source adapter layer.
- * Called by get-autotask-startable-jobs.ps1 when `issue_source.adapter` is
- * configured to something other than "ediprod".
+ * Bun entry point for the issue-source adapter layer.
+ * Called by get-autotask-startable-jobs.ps1 to fetch startable issues from the
+ * configured issue source (GitHub Issues).
  *
  * Outputs a single JSON object to stdout in the canonical shape that the PS1
  * script (and dashboard) expect:
