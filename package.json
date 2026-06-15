@@ -1,11 +1,21 @@
 {
   "name": "autotask",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
     "test": "bun test tests",
-    "test:watch": "bun test --watch tests"
+    "test:watch": "bun test --watch tests",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
     "teams-api": "^1.2.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.1.14",
+    "typescript": "^5.7.2"
   }
 }
