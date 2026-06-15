@@ -19,7 +19,7 @@ import path from 'path';
 import fs from 'fs';
 import { getAdapter, listAdapters } from '../adapters/issue-sources/index.ts';
 import { readMergedSectionValues } from '../adapters/issue-sources/yaml-reader.ts';
-import type { Issue } from '../adapters/issue-sources/types.ts';
+import type { FetchResult, Issue } from '../adapters/issue-sources/types.ts';
 
 // ---------------------------------------------------------------------------
 // Config helpers
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   // staffId: prefer new generic key, fall back to legacy staff_code
   const staffId = readKey('staff_id') || readKey('staff_code');
 
-  let result;
+  let result: FetchResult;
   try {
     result = await adapter.fetchStartable({ adapterName, staffId, section });
   } catch (err: unknown) {
