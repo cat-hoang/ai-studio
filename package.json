@@ -1,4 +1,9 @@
 {
+  "name": "autotask",
+  "scripts": {
+    "test": "bun test tests",
+    "test:watch": "bun test --watch tests"
+  },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
     "teams-api": "^1.2.3"

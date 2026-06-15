@@ -1,0 +1,4 @@
+# Scope test discovery to our suite. Without this, `bun test` also crawls
+# workspaces/ (per-job worker clones), which contain unrelated test files.
+[test]
+root = "tests"
