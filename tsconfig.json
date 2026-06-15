@@ -19,12 +19,5 @@
     "types": ["bun"]
   },
   "include": ["adapters", "tools", "tests"],
-  "exclude": [
-    "node_modules",
-    "workspaces",
-    "temp",
-    // Legacy WTG/ediprod-only script: imports resolveMcpEdiprodRoot, which no
-    // longer exists after genericization. Excluded until that tooling is fixed.
-    "tools/set-task-type.ts"
-  ]
+  "exclude": ["node_modules", "workspaces", "temp"]
 }
