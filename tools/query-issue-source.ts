@@ -66,7 +66,7 @@ function readIssueSourceAdapter(): string {
 /** Read adapter-specific sub-section, e.g. `issue_source.github_issues`. */
 function readAdapterSection(adapterName: string): Record<string, string> {
   const { base, local } = configPaths();
-  // Sub-section key uses underscores (github_issues, linear, jira, file, ediprod)
+  // Sub-section key uses underscores (github_issues)
   const subKey = adapterName.replace(/-/g, '_');
   return readMergedSectionValues([base, local], 'issue_source', subKey);
 }
