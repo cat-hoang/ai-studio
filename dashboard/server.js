@@ -441,10 +441,6 @@ function resolveAutotaskPath(value) {
   return path.isAbsolute(trimmed) ? trimmed : path.join(AUTOTASK_DIR, trimmed);
 }
 
-function getEdiProdHttpsLink() {
-  return '';
-}
-
 function normalizeJob(job) {
   if (!job || typeof job !== 'object') return null;
 
@@ -1011,22 +1007,6 @@ function buildAttentionItems(state) {
     }
   }
 
-  const recentErrors = asArray(state.commandHistory)
-    .slice(-20)
-    .map(entry => firstNonEmptyString(entry && entry.error))
-    .filter(Boolean);
-  const tokenError = recentErrors.find(message => /token is expired|linked token is expired/i.test(message));
-  if (tokenError) {
-    items.push({
-      severity: 'error',
-      kind: 'integration-token',
-      jobNumber: '',
-      title: 'ediProd-linked auth needs refresh',
-      detail: tokenError,
-      actionLabel: 'Refresh auth',
-    });
-  }
-
   return items
     .sort((left, right) => (severityRank[left.severity] ?? 99) - (severityRank[right.severity] ?? 99) || left.title.localeCompare(right.title))
     .slice(0, ATTENTION_LIMIT);
@@ -1041,11 +1021,10 @@ function buildHealthChecks(state, attentionItems) {
   const emailConfigured = isNonEmptyString(readConfigTextValue('smtp_from')) && isNonEmptyString(readConfigTextValue('smtp_to'));
   const staleWorkers = asArray(state.workers).filter(job => job.isStale).length;
   const cleanupBlocked = [...asArray(state.completedJobs), ...asArray(state.failedJobs)].filter(job => firstNonEmptyString(job.cleanupBlockedReason)).length;
-  const degradedIntegrations = attentionItems.some(item => item.kind === 'integration-token');
   const pausedResumeCandidates = getPausedResumeCandidates(state).length;
 
   return {
-    status: degradedIntegrations || staleWorkers > 0 || cleanupBlocked > 0 ? 'degraded' : 'ready',
+    status: staleWorkers > 0 || cleanupBlocked > 0 ? 'degraded' : 'ready',
     workerCli,
     autonomyMode: autonomy.mode,
     maxConcurrentWorkers: autonomy.maxConcurrentWorkers,

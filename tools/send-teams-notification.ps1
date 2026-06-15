@@ -15,9 +15,9 @@ $tplData = $data.data
 
 $autotaskRoot = Split-Path -Parent $PSScriptRoot
 $statePath = Join-Path $autotaskRoot 'temp\state.json'
-$linkCommonPath = Join-Path $PSScriptRoot 'autotask-ediprod-link-common.ps1'
+$linkCommonPath = Join-Path $PSScriptRoot 'autotask-link-common.ps1'
 if (-not (Test-Path -LiteralPath $linkCommonPath)) {
-    throw "Shared ediProd link helper not found: $linkCommonPath"
+    throw "Shared link helper not found: $linkCommonPath"
 }
 . $linkCommonPath
 
@@ -104,13 +104,13 @@ $jobGuid = Get-NotificationValue -Object $tplData -Name 'jobGuid'
 $jobLink = if ([string]::IsNullOrWhiteSpace($jobNumber)) {
     ''
 } else {
-    Get-EdiProdMarkdownLink -JobNumber $jobNumber -JobGuid $jobGuid -StatePath $statePath
+    Get-IssueMarkdownLink -JobNumber $jobNumber -StatePath $statePath
 }
 
 function Get-HtmlJobLink {
     param([string]$JobNumber, [string]$JobGuid, [string]$StatePath)
     if ([string]::IsNullOrWhiteSpace($JobNumber)) { return '' }
-    $url = Get-EdiProdWebLink -JobNumber $JobNumber -JobGuid $JobGuid -StatePath $StatePath
+    $url = Get-IssueWebLink -JobNumber $JobNumber -StatePath $StatePath
     $safe = [System.Net.WebUtility]::HtmlEncode($JobNumber)
     if ([string]::IsNullOrWhiteSpace($url)) { return $safe }
     return "<a href=`"$url`">$safe</a>"

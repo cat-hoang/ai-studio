@@ -502,7 +502,7 @@ flowchart TD
     subgraph Keys["Key Settings"]
         K1["dashboard_port: 3210"]
         K2["worker_cli: auto | claude | copilot"]
-        K3["board_name: (optional)<br>buffer_board_url"]
+        K3["issue_source.github_issues<br>(repo, labels, assignee, token_env)"]
         K4["staff_code"]
         K5["smtp_from / smtp_to"]
         K6["teams_chat_id<br>teams_chat_enabled"]

@@ -653,7 +653,7 @@ function Invoke-QueueLikeCommand {
         }
     }
 
-    # Enrich from ediProd when the text command didn't include a description
+    # Enrich from the issue source when the text command didn't include a description
     $enrichedDescription = $ParsedCommand.description
     $enrichedSummary = ''
     $enrichedJobGuid = ''
