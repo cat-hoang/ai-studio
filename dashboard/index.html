@@ -365,7 +365,7 @@ body.light #instructTextarea { background: #f8fafc !important; color: #1e293b !i
   </div>
 </div>
 
-<!-- Notes Modal (read / edit ediProd task notes) -->
+<!-- Notes Modal (read / edit task notes) -->
 <div id="instructOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;" onclick="if(event.target===this)closeInstructModal()">
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#16213e;border:1px solid #2a2a4a;border-radius:10px;padding:24px 28px;width:640px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0;">
@@ -435,7 +435,7 @@ const COMMAND_HELP = [
   ['resume <WI> [--task <seq>]',                   'Resume a paused worker'],
   ['retry <WI> [--task <seq>]',                    'Retry a failed job'],
   ['cleanup <WI> [--task <seq>]',                  'Remove job card from state'],
-  ['notes <WI> --task <seq>',                      'Read ediProd task notes'],
+  ['notes <WI> --task <seq>',                      'Read task notes'],
   ['reply <WI> <message>',                         'Send a reply to a worker awaiting input'],
   ['answer <WI> <message>',                        'Alias for reply'],
   ['status [WI] [--task <seq>]',                   'Show job status; omit WI for full summary'],
@@ -892,7 +892,7 @@ function renderUserInputBlock(request, titleText) {
   return html;
 }
 
-function ediProdLink(id, jobUrl) {
+function issueLink(id, jobUrl) {
   const url = jobUrl || '';
   if (url) {
     return '<a href="' + escapeAttribute(url) + '" title="View issue" style="color:inherit;text-decoration:underline dotted;cursor:pointer;" target="_blank" rel="noopener noreferrer">' + escapeHtml(id) + '</a>';
@@ -974,7 +974,7 @@ function renderCard(item, type) {
   let html = '<div class="card" id="' + escapeAttribute(cardId) + '">';
   html += '<div class="card-header">';
   html += '<div class="job-heading">';
-  html += '<span class="job-number">' + ediProdLink(jobNumber, jobUrl) + '</span>';
+  html += '<span class="job-number">' + issueLink(jobNumber, jobUrl) + '</span>';
   if (summaryText && summaryText !== jobNumber) html += '<span class="job-summary">' + summary + '</span>';
   html += '</div>';
   html += '<div>';

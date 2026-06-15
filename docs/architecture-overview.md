@@ -8,7 +8,7 @@
 
 1. [System Components](#1-system-components)
 2. [Component Relationships](#2-component-relationships)
-3. [edi CLI — Role Throughout the System](#3-edi-cli--role-throughout-the-system)
+3. [Issue Source Integration](#3-issue-source-integration)
 4. [Worker Start Flow (Sequence)](#4-worker-start-flow-sequence)
 5. [Worker Lifecycle (State Machine)](#5-worker-lifecycle-state-machine)
 6. [Worker Finalization Flow](#6-worker-finalization-flow)
@@ -35,10 +35,9 @@
 | **Launch Script** | PowerShell (`tools\launch-autotask-worker.ps1`) | Opens Windows Terminal tab; selects Claude or Copilot CLI |
 | **Worker Agent** | Claude Code **or** Copilot CLI | Autonomous AI agent that executes the task end-to-end |
 | **Finalize Script** | PowerShell (`tools\finalize-autotask-worker.ps1`) | Updates state; sends notifications; cleans up workspace |
-| **edi CLI** | Bun/Node (`mcp-ediprod`) | Gate to ediProd: claim, suspend, notes, task queries |
 | **Email Notifier** | PowerShell + Microsoft Graph | Sends start/complete/failed reports to configured mailbox |
 | **Teams Notifier** | PowerShell + Graph + JS helper | Sends messages to configured Teams chat |
-| **Poller: Startable Jobs** | PowerShell (`get-autotask-startable-jobs.ps1`) | Queries BM OData (primary) and PAVE API (fallback) for available tasks every 30 s |
+| **Poller: Startable Jobs** | PowerShell (`get-autotask-startable-jobs.ps1`) | Queries the configured issue source (GitHub Issues) for available tasks every 30 s |
 | **Poller: Email Commands** | PowerShell (`poll-autotask-email-input.ps1`) | Reads Inbox/Autotask folder for operator commands |
 | **Poller: Teams Commands** | PowerShell (`poll-autotask-teams-input.ps1`) | Reads Teams chat for operator commands |
 
@@ -78,7 +77,7 @@ graph TB
     end
 
     subgraph External["🌐 External Services"]
-        EDI[edi CLI → ediProd / PAVE]
+        GH[GitHub Issues API]
         GRAPH[Microsoft Graph API]
         TEAMS[Teams Chat]
         CRIKEY[Crikey / GitHub CI]
@@ -101,108 +100,30 @@ graph TB
     PJ -- "writes startableJobs" --> STATE
     PE -- "writes commandHistory" --> STATE
     PT -- "writes commandHistory" --> STATE
-    PJ --> EDI
+    PJ --> GH
     EM --> GRAPH
     TM --> GRAPH
     GRAPH --> TEAMS
-    WA --> EDI
+    WA --> GH
     WA --> CRIKEY
 ```
 
 ---
 
-## 3. edi CLI — Role Throughout the System
+## 3. Issue Source Integration
 
-The `edi` CLI (from the `mcp-ediprod` repo) is **not just a task management tool** — it is woven into every major phase of the Autotask pipeline. The sections below map each touchpoint.
+Autotask interacts with the configured issue source (GitHub Issues) through the
+`issue-source` adapter at each major phase of the pipeline:
 
-```mermaid
-flowchart TD
-    subgraph legend["edi CLI touchpoints (in execution order)"]
-        direction TB
-        T1["① Startable Jobs Fetch<br>BM OData — query-bm-startable.ts<br>imports createClient from mcp-ediprod/src/apps/cli/auth.ts<br>(auth library, not CLI subprocess)"]
-        T2["② Worker Phase 1 — Workspace Setup<br>edi task claim {WI} --task {seq}<br>edi task suspend {WI} --task {seq}<br>(claim → immediately SUS to prevent race conditions)"]
-        T3["③ Worker Phase 4 — Read Work Item<br>edi workitem get {WI}<br>edi cs get {WI}<br>edi workflow list {WI}<br>edi task list {WI} --format json<br>edi task notes read {taskId}<br>(discover task details + mandatory human instructions in notes)"]
-        T4["④ Worker during execution<br>edi task notes append {taskId} --content ...<br>(record progress, timestamps, intermediate findings)"]
-        T5["⑤ Finalize Script — Completion/Failure Note<br>edi --format jsonl task list {WI}  → find taskId by sequence<br>edi task notes read {taskId}  → dedup check<br>edi task notes append {taskId} --content ...  → record result + PRs + duration"]
-        T6["⑥ Finalize Script — INV report upload<br>edi file upload {WI} {report.html} --type INT<br>(only for INV task type, best-effort)"]
-    end
+| Phase | Adapter touchpoint |
+|-------|--------------------|
+| **Startable jobs fetch** | `fetchStartable` — `get-autotask-startable-jobs.ps1` → `query-issue-source.ts` (github-issues adapter) lists open issues filtered by label/assignee |
+| **Worker claim** | `claim` — marks the issue as in-progress (status label) when work begins |
+| **Worker read** | the worker reads the issue title, body, and comments for task details and any human instructions |
+| **Progress / completion notes** | `appendNote` — posts progress and final result (summary + PR links) as issue comments |
+| **Status updates** | `updateStatus` — moves the issue through its lifecycle status labels |
 
-    A([Startable Jobs Poll]) --> T1
-    B([Worker Launched]) --> T2
-    T2 --> T3
-    T3 --> T4
-    T4 --> T5
-    T5 --> T6
-
-    style T1 fill:#fef3c7,stroke:#f59e0b
-    style T2 fill:#dbeafe,stroke:#3b82f6
-    style T3 fill:#dbeafe,stroke:#3b82f6
-    style T4 fill:#dbeafe,stroke:#3b82f6
-    style T5 fill:#d1fae5,stroke:#10b981
-    style T6 fill:#d1fae5,stroke:#10b981
-```
-
-### ① BM OData auth (library import)
-
-`tools/query-bm-startable.ts` does **not** shell out to `edi`. It imports the auth layer directly from the mcp-ediprod TypeScript source:
-
-```ts
-import { createClient } from 'C:/BS/Git/GitHub/WiseTechGlobal/mcp-ediprod/src/apps/cli/auth.ts';
-```
-
-Requirements: mcp-ediprod cloned at that exact path + `edi login` cached + `bun` installed.
-
-### ② Worker Phase 1 — claim & suspend
-
-Immediately after the worker starts, it claims the task and **suspends it** to SUS status:
-
-```
-edi task claim {jobNumber} --task {taskSequence}
-edi task suspend {jobNumber} --task {taskSequence} --reason "Claimed by {staffCode} for Autotask work"
-```
-
-This prevents other engineers from accidentally picking up the same task.
-
-### ③ Worker Phase 4 — read work item
-
-The worker reads everything it needs from ediProd before starting design/coding:
-
-```
-edi workitem get {jobNumber}          # full WI details + acceptance criteria
-edi cs get {jobNumber}                # for CS incident tickets
-edi workflow list {jobNumber}         # workflow task breakdown
-edi task list {jobNumber} --format json   # find taskId matching taskSequence
-edi task notes read {taskId}          # ⚠️ MANDATORY: notes may contain human instructions
-```
-
-> Task notes are treated with the **same authority as the work item description**. Any instructions, constraints, or context left by a human or previous run in task notes are mandatory inputs to the design plan.
-
-### ④ Worker progress notes
-
-Throughout execution the worker appends timestamped progress notes:
-
-```
-edi task notes append {taskId} --content "[NTR] Started: 2026-04-10T05:00Z — planning phase"
-edi task notes append {taskId} --content "[NTR] Code complete — building tests"
-```
-
-### ⑤ Finalize script — completion/failure note
-
-`finalize-autotask-worker.ps1` always appends a final note (with deduplication guard):
-
-```
-edi --format jsonl task list {jobNumber}   # locate taskId by sequence number
-edi task notes read {taskId}              # check if completion marker already exists
-edi task notes append {taskId} --content "[NTR] Completed: 2026-04-10T06:00Z (Autotask, 1h 2m)<br>{summary}<br>PRs: {urls}"
-```
-
-### ⑥ Finalize script — INV report upload
-
-For `INV` task type only, the finalize script uploads any `*report*.html` files to ediProd:
-
-```
-edi file upload {jobNumber} {workspace}/*report*.html --type INT
-```
+> Issue comments are treated with the **same authority as the issue description**. Any instructions, constraints, or context left by a human or previous run are mandatory inputs to the design plan.
 
 ---
 
@@ -218,7 +139,7 @@ sequenceDiagram
     participant LAUNCH as launch-autotask-worker.ps1
     participant WT as Windows Terminal
     participant AGENT as Worker Agent<br/>(Claude/Copilot)
-    participant EDI as edi CLI
+    participant GH as GitHub Issues
 
     Operator->>UI: Click "Start Now" on Startable card
     UI->>SRV: POST /api/queue {jobNumber, taskSequence, taskType, ...}
@@ -246,10 +167,9 @@ sequenceDiagram
 
     loop Every ~30s
         AGENT->>STATE: Update lastHeartbeatAt
-        EDI->>EDI: edi task suspend (keep SUS status)
     end
 
-    AGENT->>EDI: edi task notes append (progress)
+    AGENT->>GH: Post progress comment to the issue
     AGENT->>AGENT: Execute task (build/test/PR/etc.)
 ```
 
@@ -259,7 +179,7 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Startable : edi CLI / PAVE poller discovers task
+    [*] --> Startable : startable poller discovers task
 
     Startable --> WaitingQueue : "Operator clicks Start Now<br/>(POST /api/queue)"
 
@@ -317,7 +237,7 @@ flowchart TD
     J --> K
     K --> L["Remove from workers[]"]
     L --> M[Write-AutotaskState → temp/state.json<br>with retry + timestamped backup]
-    M --> N[edi task notes append<br> start+end timestamps, summary]
+    M --> N[Append final note to the issue<br> start+end timestamps, summary]
     N --> O{Email configured?<br>smtp_from + smtp_to set?}
     O -- yes --> P[send-email-notification.ps1<br>Graph API with OAuth2/SP token]
     O -- no --> Q[Skip email]
@@ -363,61 +283,32 @@ flowchart TD
 
 ## 8. Startable Jobs Polling
 
-### Prerequisites for BM OData
+### Prerequisites for the GitHub Issues fetch
 
-> ⚠️ **Critical dependency:** `query-bm-startable.ts` does **not** shell out to `edi`. It imports the auth layer **directly from the mcp-ediprod source**:
-> ```ts
-> import { createClient } from 'C:/BS/Git/GitHub/WiseTechGlobal/mcp-ediprod/src/apps/cli/auth.ts';
-> ```
-> This means **all three of the following must be true** or BM OData fetching will fail entirely and fall back to PAVE API (or return empty):
-> 1. **`mcp-ediprod` repo cloned** at `C:/BS/Git/GitHub/WiseTechGlobal/mcp-ediprod`
-> 2. **`edi login` completed** — cached credentials must be present on disk
-> 3. **`bun` installed** — the script is run as `bun tools/query-bm-startable.ts` (TypeScript executed directly; node/npm cannot substitute)
+> ⚠️ **Required config:** the startable poller fetches through `tools/query-issue-source.ts` (the `github-issues` adapter). For it to return results:
+> 1. **`issue_source.github_issues.repo`** set to `owner/repo`
+> 2. **GitHub token** present in the configured env var (`token_env`, default `GITHUB_TOKEN`)
+> 3. **`bun` installed** — the script is run as `bun tools/query-issue-source.ts`
 
 ```mermaid
 flowchart TD
-    subgraph prereqs["⚠️ Required on this machine"]
-        P1["mcp-ediprod repo<br>cloned at hardcoded path<br>C:/BS/Git/.../mcp-ediprod"]
-        P2["edi login completed<br>(cached credentials on disk)"]
-        P3["bun installed<br>(runs .ts directly)"]
-    end
-
     A([Dashboard Server polls every 30s]) --> B[get-autotask-startable-jobs.ps1]
 
-    B --> E["bun tools/query-bm-startable.ts"]
+    B --> E["bun tools/query-issue-source.ts"]
 
-    prereqs --> E
+    E --> F["Loads the github-issues adapter<br>Queries the GitHub Issues API:<br>· GET /repos/{owner}/{repo}/issues<br>· filter by label + assignee<br>· excludes pull requests"]
 
-    E --> F["Imports createClient from<br>mcp-ediprod/src/apps/cli/auth.ts<br>(uses edi login cached credentials)<br>Queries ediProd OData directly:<br>· BMWorkflowTasks — filter by staff_code<br>  or capability temp/staff-capabilities-CODE.json<br>· P9Logs — check SRT event per task<br>· WorkItems — batch-resolve WI numbers"]
+    F --> I[Apply post-fetch filters]
 
-    F --> G{BM OData<br>returned results?}
-    G -- yes --> H[Cache to artifacts-cache/bm-startable-cache.json]
-    H --> I[Apply post-fetch filters]
+    I --> M["Filter: drop excluded_task_types"]
 
-    G -- no --> J{buffer_board_url<br>configured?}
-    J -- yes --> K["PAVE API fallback<br>GET /api/staff/{code}/tasks<br>?board_id={id}&include_off_board_tasks=true"]
-    K --> I
-    J -- no --> L[Return empty with warning]
-    L --> I
-
-    E --> I
-
-    I --> M["Filter: Drop excluded_task_types<br>SHV SH0 PRV MTG CHK CH0 CH1 CH2 CHG CH4"]
-
-    M --> N["Write to state.startableJobs[]<br>Enrich jobUrl via jobGuid if board URL configured"]
+    M --> N["Write to state.startableJobs[]"]
     N --> O([Dashboard UI shows Startable column])
 
     style A fill:#4a9eff,color:#fff
     style O fill:#22c55e,color:#fff
     style E fill:#f59e0b,color:#fff
-    style K fill:#8b5cf6,color:#fff
-    style prereqs fill:#fee2e2,stroke:#ef4444
-    style P1 fill:#fecaca,stroke:#ef4444
-    style P2 fill:#fecaca,stroke:#ef4444
-    style P3 fill:#fecaca,stroke:#ef4444
 ```
-
-> **Note:** `edi workitem list` is **not** used in the startable-jobs fetch path. BM OData is always queried directly via `bun tools/query-bm-startable.ts`. The PAVE API is used as an automatic fallback only when BM OData returns no results.
 
 ---
 
@@ -652,9 +543,9 @@ flowchart TD
 | `config.local.yaml.template` | Template for new installs |
 | `tools/start-autotask-worker.ps1` | Worker bootstrap: creates workspace, writes prompt, calls launch |
 | `tools/launch-autotask-worker.ps1` | Resolves CLI; opens `wt.exe` tab for Claude or Copilot |
-| `tools/finalize-autotask-worker.ps1` | End-of-job: state update, edi notes, notifications, cleanup |
+| `tools/finalize-autotask-worker.ps1` | End-of-job: state update, issue notes, notifications, cleanup |
 | `tools/autotask-state-common.ps1` | `Read-AutotaskState` / `Write-AutotaskState` with retries + backups |
-| `tools/get-autotask-startable-jobs.ps1` | Fetches available tasks from edi CLI or PAVE board |
+| `tools/get-autotask-startable-jobs.ps1` | Fetches available tasks from the configured issue source (GitHub Issues) |
 | `tools/send-email-notification.ps1` | Graph API email with OAuth2/SP, 3-retry + exponential backoff |
 | `tools/send-teams-notification.ps1` | Teams direct-chat via Graph (webhook path removed) |
 | `tools/invoke-teams-chat.js` | Node.js helper for Graph `/chats/{id}/messages` |
@@ -663,7 +554,6 @@ flowchart TD
 | `tools/poll-autotask-teams-input.ps1` | Polls Teams chat for operator commands |
 | `agents/task-worker.md` | System prompt / instructions given to every worker agent |
 | `setup/install.ps1` | Interactive installer — requires **pwsh 7+** |
-| `docs/edi-cli.md` | edi CLI quick reference + install steps |
 
 ---
 
@@ -683,7 +573,7 @@ flowchart TD
 
     B -- "State write errors / data loss" --> G["Write-AutotaskState retries 3x;<br>Timestamped backups in temp/<br>Check temp/*.backup-*.json<br>for last known good state"]
 
-    B -- "edi commands fail in worker" --> H["Check:<br>- edi --version works in worker tab<br>- GLOW_USERNAME/GLOW_PASSWORD<br>  env vars set (User scope)<br>- Run edi login to refresh<br>- Copilot workers auto-copy<br>  User env vars at launch"]
+    B -- "GitHub API calls fail in worker" --> H["Check:<br>- GITHUB_TOKEN set in worker env<br>- token scopes + not expired<br>- repo/owner correct<br>- network / VPN reachable"]
 
     B -- "Ephemeral file CI failure" --> I["Artifact/token committed<br>outside temp/<br>Run: tools/check-ephemeral-files.ps1<br>Move file to temp/ and recommit"]
 
@@ -698,10 +588,6 @@ flowchart TD
 
 | Rule | Reason |
 |---|---|
-| ✅ `edi task suspend` — permitted | Puts task in SUS; safe to use freely |
-| ✅ `edi task claim` → immediately `edi task suspend` | Prevents race conditions with other engineers |
-| ✅ `edi task notes append` | Safe audit trail for start/end times |
-| ❌ `edi task start` — **NEVER** | Sets WRK status; causes race conditions |
-| ❌ `edi task complete` — **NEVER** | Sets CLS status; humans close tasks manually |
+| ❌ Never close issues from automation | Humans close issues manually after review |
 | ✅ All temp files go in `temp/` | gitignored; CI enforces via `check-ephemeral-files.ps1` |
 | ✅ `pwsh` 7+ required | `setup/install.ps1` enforced with `#Requires -Version 7.0` |
