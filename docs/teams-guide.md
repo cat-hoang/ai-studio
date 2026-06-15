@@ -24,7 +24,7 @@ Add these keys to `config.local.yaml`:
 
 ~~~yaml
 teams_chat_enabled: true
-teams_chat_email: "your.name@wisetechglobal.com"
+teams_chat_email: "your.name@example.com"
 teams_chat_target_mode: "self"
 teams_chat_target: ""
 teams_chat_command_polling_enabled: true
