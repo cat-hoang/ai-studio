@@ -2,7 +2,7 @@
 
 **Multi-agent task orchestrator that turns your development backlog into pull requests — autonomously.**
 
-Autotask fetches open issues from your configured issue source (GitHub Issues, Linear, Jira, or a local file), spins up isolated AI workers in dedicated terminal tabs, and delivers tested PRs — all while keeping you in control through a live dashboard, Teams chat, or email.
+Autotask fetches open issues from GitHub Issues, spins up isolated AI workers in dedicated terminal tabs, and delivers tested PRs — all while keeping you in control through a live dashboard, Teams chat, or email.
 
 ## Why Autotask?
 
@@ -11,7 +11,7 @@ Autotask fetches open issues from your configured issue source (GitHub Issues, L
 - **Hybrid AI economics.** Route orchestration to cost-effective models (GitHub Copilot / GPT-5 mini) and reserve full-reasoning models (Claude Code) for complex coding phases. Or run everything on one platform — your choice.
 - **Safe by design.** Hard-coded guardrails prevent workers from closing tasks (humans do that), force-pushing, or corrupting shared state. Hook-based enforcement, not trust-based.
 - **Workspace isolation.** Each work item gets its own directory, branch, and build context. No cross-job contamination. Workspaces persist for inspection and reuse.
-- **Pluggable issue sources.** Pull startable issues from GitHub Issues, Linear, Jira, or a local JSON file. Switch adapters with a single config line.
+- **GitHub-native issue intake.** Pull startable issues straight from GitHub Issues with a label/assignee filter — no extra tracker setup.
 
 ## Architecture
 

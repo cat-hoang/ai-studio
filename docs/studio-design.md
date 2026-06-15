@@ -29,7 +29,7 @@
 
 | Principle | Description |
 |-----------|-------------|
-| **Generic by default** | Works out of the box with GitHub Issues, Linear, Jira, or a plain JSON file. No proprietary system required. |
+| **Generic by default** | Works out of the box with GitHub Issues. No proprietary system required. |
 | **Specialization over generalism** | Each agent has a focused role and focused prompts. The architect does not write tests; the tester does not design architecture. |
 | **Handoff-driven** | Agents communicate through shared **artifacts** (spec docs, code, test reports) stored in the workspace. No shared mutable state between agents. |
 | **Human gates** | The studio pauses at configurable quality gates (after design, after PR creation) for human approval before proceeding. |
@@ -45,7 +45,7 @@
 |---------|-------------|
 | `ediProd` task tracking | Generic "issue tracker" plugin interface |
 | `edi task claim/suspend/notes` calls | `issue-tracker` adapter methods: `claim`, `update_status`, `append_note` |
-| BM OData + PAVE API job discovery | `issue-source` adapter: GitHub Issues, Linear, Jira, or file-based |
+| BM OData + PAVE API job discovery | `issue-source` adapter: GitHub Issues |
 | `Crikey` artifact download | Generic `artifact-cache` adapter (CI system agnostic) |
 | `CargoWise` / WTG repo mapping | User-defined `repo_groups` in config |
 | VPN preflight to `crikey.wtg.zone` | Generic `preflight_checks` list in config |
@@ -107,9 +107,6 @@ flowchart TD
 
     subgraph IssueSource["Issue Source Adapter"]
         GH[GitHub Issues]
-        LI[Linear]
-        JI[Jira]
-        FILE[File / JSON]
     end
 
     Channels --> CMD
@@ -359,10 +356,6 @@ interface IssueSourceAdapter {
 | Adapter | Source | Notes |
 |---------|--------|-------|
 | `github-issues` | GitHub Issues API | Filter by label, milestone, or project board column |
-| `linear` | Linear GraphQL API | Filter by team, state, priority |
-| `jira` | Jira REST API | Filter by project, sprint, status |
-| `file` | Local JSON file | `issues.json` — for offline testing and demos |
-| `ediprod` (legacy) | ediProd / PAVE | Retained as optional plugin for WTG users |
 
 ### Configuration (per adapter)
 
@@ -509,10 +502,6 @@ Existing commands (`autotask-start`, `autotask-status`, etc.) remain as legacy s
 adapters/
   issue-sources/
     github-issues.ts    ← GitHub Issues adapter
-    linear.ts           ← Linear adapter
-    jira.ts             ← Jira adapter
-    file.ts             ← Local file adapter
-    ediprod.ts          ← Legacy WTG adapter (optional)
     index.ts            ← Adapter loader
 
 agents/
