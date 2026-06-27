@@ -146,7 +146,11 @@ Write a worker entry with the `studioTeam` extension:
       "reviewer":   "pending"
     },
     "artifactsPath": "workspaces\\{issueId}\\studio",
-    "reviewCycles": 0
+    "reviewCycles": 0,
+    "repos": [{repo objects with name/path/remoteName}],
+    "workerCli": "{worker_cli from config}",
+    "branchPrefix": "{branch_prefix from config}",
+    "autonomyMode": "{studio.autonomy_mode from config}"
   }
 }
 ```

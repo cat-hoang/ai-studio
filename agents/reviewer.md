@@ -151,7 +151,7 @@ $handoff.reviewVerdict = "{approve|request_changes|escalate}"
 $handoff | ConvertTo-Json -Depth 10 | Set-Content "{artifactsPath}\handoff.json" -Encoding UTF8
 ```
 
-### Phase 5: Update state.json
+### Phase 5: Update state.json and advance pipeline
 
 Update `{autotaskRoot}\temp\state.json`:
 
@@ -163,6 +163,43 @@ Based on verdict:
 - **APPROVE**: Set `studioTeam.activeAgent = "orchestrator:post-pr"`, `phase = "reviewer-approved"`
 - **REQUEST_CHANGES** (cycles remaining): Set `studioTeam.activeAgent = "developer:revision"`, `phase = "reviewer-changes-requested"`, increment `studioTeam.reviewCycles`
 - **ESCALATE** or **REQUEST_CHANGES** (cycles exhausted): Set `studioTeam.activeAgent = "escalated"`, `phase = "reviewer-escalated"`
+
+```powershell
+$statePath = "{autotaskRoot}\temp\state.json"
+$state = Get-Content $statePath -Raw | ConvertFrom-Json
+$worker = $state.workers | Where-Object { $_.issueId -eq "{issueId}" }
+$worker.studioTeam.stages.reviewer = "completed"
+$worker.studioTeam.reviewCycles = {reviewCycle}
+# set activeAgent and phase per verdict above
+$worker.lastUpdated = (Get-Date -Format "o")
+$state | ConvertTo-Json -Depth 10 | Set-Content $statePath -Encoding UTF8
+```
+
+**On REQUEST_CHANGES (cycles remaining) — re-launch developer immediately:**
+
+Read the launch config from `studioTeam` in state.json (fields `workerCli`, `branchPrefix`, `autonomyMode`, `repos`). If any field is missing, read from `{autotaskRoot}\config.yaml`.
+
+```powershell
+$nextCycle = {reviewCycle} + 1
+& "{autotaskRoot}\tools\launch-studio-team.ps1" `
+  -Cli "{studioTeam.workerCli or config:worker_cli}" `
+  -IssueId "{issueId}" `
+  -Title "{title}" `
+  -WorkspacePath "{workspacePath}" `
+  -ArtifactsPath "{artifactsPath}" `
+  -Repos '{studioTeam.repos as JSON or []}' `
+  -BranchPrefix "{studioTeam.branchPrefix or config:branch_prefix}" `
+  -Stage developer `
+  -RevisionMode `
+  -AutonomyMode "{studioTeam.autonomyMode or auto}" `
+  -ReviewCycles {maxReviewCycles} `
+  -ReviewCycleNumber $nextCycle `
+  -PluginDir "{autotaskRoot}"
+```
+
+Print: `🔄 Revision cycle $nextCycle launched — developer agent opening in new tab.`
+
+Do **not** re-launch on ESCALATE or when cycles are exhausted — human action required.
 
 ### Phase 6: Signal Result
 

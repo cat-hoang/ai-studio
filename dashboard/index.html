@@ -148,6 +148,14 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .activity-startable { background: #74b9ff; color: #0b1320; }
 .activity-completed { background: var(--success); color: #fff; }
 .activity-failed { background: var(--error); color: #fff; }
+.studio-gate-banner { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 8px; background: rgba(139, 92, 246, 0.14); border: 1px solid rgba(139, 92, 246, 0.45); border-radius: 6px; font-size: 12px; color: #c4b5fd; }
+.studio-gate-icon { font-size: 14px; flex-shrink: 0; }
+.studio-stage-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+.studio-stage-pill { padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; background: rgba(255,255,255,0.07); color: var(--text-dim); border: 1px solid var(--border); }
+.studio-stage-pill-done { background: rgba(0,184,148,0.18); color: #55efc4; border-color: rgba(0,184,148,0.4); }
+.studio-stage-pill-active { background: rgba(139,92,246,0.22); color: #c4b5fd; border-color: rgba(139,92,246,0.55); }
+.studio-stage-pill-gate { background: rgba(253,203,110,0.18); color: #fdcb6e; border-color: rgba(253,203,110,0.45); }
+.btn-purple { background: #6c5ce7; color: #fff; }
 .phase-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin: 6px 0; overflow: hidden; }
 .phase-bar-fill { height: 100%; background: var(--highlight); border-radius: 2px; transition: width 0.5s ease; }
 .phase-label { font-size: 11px; color: var(--text-dim); }
@@ -1067,7 +1075,31 @@ function renderCard(item, type) {
     html += '</select></label></div>';
   }
 
-  if (type === 'running' && phase) {
+  // Studio mode: stage pipeline pills + gate banner
+  const studioTeam = item.studioTeam || null;
+  const studioActive = studioTeam && studioTeam.enabled;
+  if (studioActive && type === 'running') {
+    const stageOrder = ['architect', 'developer', 'tester', 'reviewer'];
+    const stageLabels = { architect: '📐 Arch', developer: '⚙️ Dev', tester: '🧪 Test', reviewer: '📝 Review' };
+    const stagesStatus = (studioTeam && studioTeam.stages) || {};
+    const activeAgent = String((studioTeam && studioTeam.activeAgent) || '');
+    const isAtGate = activeAgent.startsWith('gate:');
+    html += '<div class="studio-stage-pills">';
+    stageOrder.forEach(s => {
+      const st = stagesStatus[s] || 'pending';
+      let cls = 'studio-stage-pill';
+      if (st === 'completed') cls += ' studio-stage-pill-done';
+      else if (activeAgent === s || (isAtGate && s === 'developer' && activeAgent === 'gate:post-design')) cls += ' studio-stage-pill-active';
+      html += '<span class="' + cls + '">' + escapeHtml(stageLabels[s] || s) + '</span>';
+    });
+    html += '</div>';
+    if (isAtGate) {
+      const gateLabel = activeAgent === 'gate:post-design' ? 'Waiting for spec approval (post-design gate)' : 'Waiting for merge approval (post-PR gate)';
+      html += '<div class="studio-gate-banner"><span class="studio-gate-icon">🔒</span><span>' + escapeHtml(gateLabel) + '</span></div>';
+    }
+  }
+
+  if (type === 'running' && phase && !studioActive) {
     const pct = getPhasePercent(phase);
     html += '<div class="phase-label">' + escapeHtml(phase) + '</div>';
     html += '<div class="phase-bar"><div class="phase-bar-fill" style="width:' + pct + '%"></div></div>';
@@ -1121,6 +1153,12 @@ function renderCard(item, type) {
     html += '<button class="btn btn-blue" onclick=\'jumpToTab(' + jobNumberAttr + ')\'>Jump to Tab</button>';
     if (userInputRequest && userInputRequest.state === 'pending') {
       html += '<button class="btn btn-orange" onclick=\'replyToJob(' + jobNumberAttr + ',' + taskSequenceAttr + ',' + escapeAttribute(JSON.stringify(userInputRequest.requestId || '')) + ')\'>Provide Input</button>';
+    }
+    // Studio gate approval button — shown only when the pipeline is paused at a gate
+    const runningStudioTeam = item.studioTeam || null;
+    const runningActiveAgent = String((runningStudioTeam && runningStudioTeam.activeAgent) || '');
+    if (runningStudioTeam && runningStudioTeam.enabled && runningActiveAgent.startsWith('gate:')) {
+      html += '<button class="btn btn-purple" onclick=\'approveStudioGate(' + jobNumberAttr + ')\'>Approve Gate</button>';
     }
     // Complete button: intentionally kept — manually moves this running card to the Completed
     // column without stopping the process. Useful when a worker finishes silently or the
@@ -1580,6 +1618,23 @@ async function toggleNeverAutoStart(jobNumber, taskSequence, currentValue) {
     }
     showToast((!currentValue ? 'Disabled' : 'Enabled') + ' auto start for ' + jobNumber + (taskSequence ? (' task ' + taskSequence) : ''), 'success');
     refreshState();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function approveStudioGate(jobNumber) {
+  if (!confirm('Approve studio gate for ' + jobNumber + '? This will advance the pipeline to the next stage.')) return;
+  try {
+    const res = await fetch('/api/approve/' + encodeURIComponent(jobNumber), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approvedBy: 'dashboard' }),
+    });
+    const data = await res.json();
+    if (!data.success) { showToast('Gate approval failed: ' + (data.error || 'Unknown error'), 'error'); return; }
+    showToast(data.message || ('Gate approved for ' + jobNumber), 'success');
+    if (data.state) updateUI(data.state);
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }

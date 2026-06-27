@@ -449,7 +449,7 @@ function Parse-AutotaskCommand {
     $action = $rawParts[0].ToLowerInvariant()
     $parts = @($rawParts)
     $taskSequence = ''
-    if ($action -in @('status', 'queue', 'start', 'resume', 'retry', 'cleanup', 'notes', 'setnotes')) {
+    if ($action -in @('status', 'queue', 'start', 'resume', 'retry', 'cleanup', 'notes', 'setnotes', 'approve')) {
         $optionParts = Get-CommandOptionParts -Parts $rawParts
         $parts = @($optionParts.parts)
         $taskSequence = [string]$optionParts.taskSequence
@@ -579,6 +579,16 @@ function Parse-AutotaskCommand {
             }
         }
 
+        'approve' {
+            if ($Parts.Count -lt 2) {
+                throw 'Usage: approve <issueId>'
+            }
+            return [PSCustomObject]@{
+                action    = 'approve'
+                jobNumber = $Parts[1].ToUpperInvariant()
+            }
+        }
+
         'reply' {
             if ($trimmedCommand -notmatch '^(reply|answer)\s+(?<job>(WI|CS|PRJ)\d{8})\s+(?<response>.+)$') {
                 throw 'Usage: reply <jobNumber> <message>'
@@ -604,7 +614,7 @@ function Parse-AutotaskCommand {
         }
 
         default {
-            throw "Unsupported command '$action'. Supported commands: help, status, queue, start, resume, retry, cleanup, reply, answer."
+            throw "Unsupported command '$action'. Supported commands: help, status, queue, start, resume, retry, cleanup, approve, reply, answer."
         }
     }
 }
@@ -951,7 +961,7 @@ function Invoke-HelpCommand {
     return [PSCustomObject]@{
         state = $State
         stateChanged = $false
-        message = 'Supported commands: help, status [jobNumber] [--task <taskSequence>], queue <jobNumber> [--task <taskSequence>] [taskType] [description], start <jobNumber> [--task <taskSequence>], resume <jobNumber> [--task <taskSequence>], retry <jobNumber> [--task <taskSequence>], cleanup <jobNumber> [--task <taskSequence>], notes <jobNumber> --task <taskSequence>, setnotes <jobNumber> --task <taskSequence> <content>, reply <jobNumber> <message>, answer <jobNumber> <message>.'
+        message = 'Supported commands: help, status [jobNumber] [--task <taskSequence>], queue <jobNumber> [--task <taskSequence>] [taskType] [description], start <jobNumber> [--task <taskSequence>], resume <jobNumber> [--task <taskSequence>], retry <jobNumber> [--task <taskSequence>], cleanup <jobNumber> [--task <taskSequence>], notes <jobNumber> --task <taskSequence>, setnotes <jobNumber> --task <taskSequence> <content>, approve <issueId>, reply <jobNumber> <message>, answer <jobNumber> <message>.'
         jobNumber = ''
         action = 'help'
         requiresAutotaskStart = $false
@@ -1086,6 +1096,46 @@ function Invoke-SetNotesCommand {
     }
 }
 
+function Invoke-ApproveCommand {
+    param(
+        [Parameter(Mandatory)]
+        [psobject]$ParsedCommand,
+
+        [string]$CommandSource
+    )
+
+    $scriptPath = Join-Path $PSScriptRoot 'approve-studio-gate.ps1'
+    if (-not (Test-Path -LiteralPath $scriptPath)) {
+        throw 'approve-studio-gate.ps1 not found. Studio mode may not be enabled.'
+    }
+
+    $approveParams = @{
+        IssueId    = $ParsedCommand.jobNumber
+        ApprovedBy = Get-FirstNonEmptyValue -Values @($CommandSource, 'manual')
+    }
+
+    $rawOutput = & $scriptPath @approveParams 2>&1 | Out-String
+    $jsonLine  = @(($rawOutput -split "`n") | Where-Object { ([string]$_).TrimStart().StartsWith('{') }) | Select-Object -Last 1
+    if (-not $jsonLine) {
+        throw "approve-studio-gate.ps1 returned no output for $($ParsedCommand.jobNumber). Raw: $rawOutput"
+    }
+
+    $approveResult = [string]$jsonLine | ConvertFrom-Json -ErrorAction Stop
+    if (-not $approveResult.success) {
+        throw [string]$approveResult.error
+    }
+
+    return [PSCustomObject]@{
+        state                = Read-AutotaskState
+        stateChanged         = $true
+        message              = [string]$approveResult.message
+        jobNumber            = $ParsedCommand.jobNumber
+        action               = 'approve'
+        requiresAutotaskStart = $false
+        data                 = $approveResult
+    }
+}
+
 function Invoke-AutotaskCommand {
     param(
         [Parameter(Mandatory)]
@@ -1136,6 +1186,10 @@ function Invoke-AutotaskCommand {
 
         'setnotes' {
             return Invoke-SetNotesCommand -ParsedCommand $ParsedCommand
+        }
+
+        'approve' {
+            return Invoke-ApproveCommand -ParsedCommand $ParsedCommand -CommandSource $CommandSource
         }
 
         'reply' {

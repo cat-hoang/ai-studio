@@ -1704,6 +1704,29 @@ async function handleQueue(req, res) {
   }
 }
 
+async function handleApproveGate(req, res, issueId) {
+  try {
+    if (!issueId) return sendError(res, 400, 'issueId required in URL');
+    const body = await parseBody(req).catch(() => ({}));
+    const approvedBy = firstNonEmptyString(body && body.approvedBy, 'dashboard');
+    const scriptPath = path.join(AUTOTASK_DIR, 'tools', 'invoke-autotask-command.ps1');
+    const args = ['-CommandText', `approve ${issueId}`, '-Source', approvedBy];
+
+    runPowerShellFile(scriptPath, args, (err, stdout) => {
+      if (err) return sendError(res, 500, err.message);
+      const lines = String(stdout).split('\n');
+      const jsonLine = lines.filter(l => l.trim().startsWith('{')).pop();
+      if (!jsonLine) return sendError(res, 500, 'approve-studio-gate returned no JSON');
+      let result;
+      try { result = JSON.parse(jsonLine.trim()); } catch (e) { return sendError(res, 500, 'Invalid JSON from approve script'); }
+      if (!result.success) return sendError(res, 400, result.error || 'Gate approval failed');
+      sendJson(res, 200, { success: true, message: result.message, state: buildDashboardState(readRawState()) });
+    });
+  } catch (e) {
+    sendError(res, 500, e.message);
+  }
+}
+
 function handleRestart(req, res) {
   // Graceful restart: respond first, then trigger process exit so PM2 restarts us.
   // If not under PM2 the process simply exits and must be started manually.
@@ -2427,6 +2450,12 @@ const server = http.createServer(async (req, res) => {
     const completeMatch = pathname.match(/^\/api\/complete\/(.+)$/);
     if (method === 'POST' && completeMatch) {
       return await handleManualComplete(req, res, decodeURIComponent(completeMatch[1]));
+    }
+
+    // Studio gate approval: POST /api/approve/:issueId
+    const approveMatch = pathname.match(/^\/api\/approve\/(.+)$/);
+    if (method === 'POST' && approveMatch) {
+      return await handleApproveGate(req, res, decodeURIComponent(approveMatch[1]));
     }
 
     sendError(res, 404, 'Not found');

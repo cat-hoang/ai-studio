@@ -65,6 +65,10 @@ param(
     [int]$ReviewCycles = 2,
     [int]$ReviewCycleNumber = 0,
 
+    # When set, the developer prompt includes pr-review.md from the artifacts folder
+    # so the agent knows which blocking issues to address in the revision.
+    [switch]$RevisionMode,
+
     [string]$PluginDir = (Split-Path -Parent $PSScriptRoot),
 
     [switch]$PassThru
@@ -174,8 +178,19 @@ function New-DeveloperPrompt {
         [string]$ArtifactsPathVal,
         [string]$ReposVal,
         [string]$BranchPrefixVal,
-        [string]$AutotaskRootVal
+        [string]$AutotaskRootVal,
+        [bool]$RevisionModeVal = $false
     )
+
+    $revisionSection = if ($RevisionModeVal) { @"
+
+revisionMode: true
+prReviewPath: $ArtifactsPathVal\pr-review.md
+
+REVISION MODE: You are addressing blocking issues identified by the reviewer.
+Read ``$ArtifactsPathVal\pr-review.md`` before coding. Focus only on the Blocking Issues
+section. Do not refactor or add features beyond what is needed to resolve those issues.
+"@ } else { '' }
 
     return @"
 You are the Autotask Developer Agent for issue $IssueIdVal.
@@ -189,7 +204,7 @@ autotaskRoot: $AutotaskRootVal
 artifactsPath: $ArtifactsPathVal
 repos: $ReposVal
 branchPrefix: $BranchPrefixVal
-workspaceMode: clone
+workspaceMode: clone$revisionSection
 
 Keep the terminal tab title exactly as launched. Do not rename the tab.
 Publish live activity via ``$AutotaskRootVal\tools\set-autotask-worker-activity.ps1``.
@@ -442,13 +457,15 @@ function Main {
                     -ArtifactsPathVal $resolvedArtifactsPath `
                     -ReposVal         $Repos `
                     -BranchPrefixVal  $BranchPrefix `
-                    -AutotaskRootVal  $AutotaskRoot
+                    -AutotaskRootVal  $AutotaskRoot `
+                    -RevisionModeVal  $RevisionMode.IsPresent
 
-                $safeSub    = $subTask -replace '[^a-zA-Z0-9\-]', '-'
-                $promptFile = Join-Path $resolvedWorkspacePath ".studio-prompt-developer-$safeSub.md"
+                $safeSub      = $subTask -replace '[^a-zA-Z0-9\-]', '-'
+                $revSuffix    = if ($RevisionMode.IsPresent) { "-rev$ReviewCycleNumber" } else { '' }
+                $promptFile   = Join-Path $resolvedWorkspacePath ".studio-prompt-developer-$safeSub$revSuffix.md"
                 [System.IO.File]::WriteAllText($promptFile, $promptContent, [System.Text.Encoding]::UTF8)
 
-                $tabTitle = "$stageIcon $IssueId dev:$subTask"
+                $tabTitle = if ($RevisionMode.IsPresent) { "$stageIcon $IssueId dev:$subTask (rev $ReviewCycleNumber)" } else { "$stageIcon $IssueId dev:$subTask" }
                 $argList  = Invoke-AgentTab `
                     -ResolvedCli          $resolvedCli `
                     -ResolvedWorkspacePath $resolvedWorkspacePath `
